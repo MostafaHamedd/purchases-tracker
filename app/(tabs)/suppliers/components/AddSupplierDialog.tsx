@@ -1,0 +1,322 @@
+import React, { useState } from 'react';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  Modal, 
+  Alert, 
+  ScrollView, 
+  KeyboardAvoidingView, 
+  Platform 
+} from 'react-native';
+import { styles } from '../styles';
+import { DiscountTier, KaratType } from '../hooks/useSuppliers';
+
+interface AddSupplierDialogProps {
+  visible: boolean;
+  onClose: () => void;
+  onSubmitSupplier: (supplierData: {
+    name: string;
+    code: string;
+    karatType: KaratType;
+    discountTiers: DiscountTier[];
+  }) => void;
+}
+
+export function AddSupplierDialog({ 
+  visible, 
+  onClose, 
+  onSubmitSupplier 
+}: AddSupplierDialogProps) {
+  const [name, setName] = useState('');
+  const [code, setCode] = useState('');
+  const [karatType, setKaratType] = useState<KaratType>('18');
+  const [tiers, setTiers] = useState<DiscountTier[]>([
+    { id: 'tier1', name: '', threshold: 0, discountPercentage: 0 }
+  ]);
+
+  const handleSubmit = () => {
+    // Validate inputs
+    if (!name.trim()) {
+      Alert.alert('Validation Error', 'Please enter a supplier name');
+      return;
+    }
+    
+    if (!code.trim()) {
+      Alert.alert('Validation Error', 'Please enter a supplier code');
+      return;
+    }
+
+    // Validate tiers
+    const validTiers = tiers.filter(tier => tier.name.trim() && tier.discountPercentage >= 0 && tier.discountPercentage <= 100);
+    
+    if (validTiers.length === 0) {
+      Alert.alert('Validation Error', 'Please add at least one valid discount tier');
+      return;
+    }
+
+    // Check for duplicate tier names
+    const tierNames = validTiers.map(tier => tier.name.trim().toLowerCase());
+    const uniqueNames = new Set(tierNames);
+    if (tierNames.length !== uniqueNames.size) {
+      Alert.alert('Validation Error', 'Tier names must be unique');
+      return;
+    }
+
+    // Check for duplicate thresholds
+    const thresholds = validTiers.map(tier => tier.threshold);
+    const uniqueThresholds = new Set(thresholds);
+    if (thresholds.length !== uniqueThresholds.size) {
+      Alert.alert('Validation Error', 'Tier thresholds must be unique');
+      return;
+    }
+
+    // Submit supplier data
+    onSubmitSupplier({
+      name: name.trim(),
+      code: code.trim().toUpperCase(),
+      karatType,
+      discountTiers: validTiers.map((tier, index) => ({
+        ...tier,
+        id: `tier${index + 1}`,
+        name: tier.name.trim(),
+      })),
+    });
+
+    // Reset form
+    setName('');
+    setCode('');
+    setKaratType('18');
+    setTiers([{ id: 'tier1', name: '', threshold: 0, discountPercentage: 0 }]);
+  };
+
+  const handleClose = () => {
+    setName('');
+    setCode('');
+    setKaratType('18');
+    setTiers([{ id: 'tier1', name: '', threshold: 0, discountPercentage: 0 }]);
+    onClose();
+  };
+
+  const addTier = () => {
+    const newTier: DiscountTier = {
+      id: `tier${tiers.length + 1}`,
+      name: '',
+      threshold: 0,
+      discountPercentage: 0,
+    };
+    setTiers([...tiers, newTier]);
+  };
+
+  const removeTier = (tierId: string) => {
+    if (tiers.length > 1) {
+      setTiers(tiers.filter(tier => tier.id !== tierId));
+    }
+  };
+
+  const updateTier = (tierId: string, field: keyof DiscountTier, value: string | number) => {
+    setTiers(tiers.map(tier => 
+      tier.id === tierId 
+        ? { ...tier, [field]: value }
+        : tier
+    ));
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={handleClose}
+    >
+      <KeyboardAvoidingView 
+        style={styles.modalOverlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView 
+          style={styles.modalContent} 
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Add New Supplier</Text>
+            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Form */}
+          <View style={styles.form}>
+            {/* Supplier Name */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Supplier Name</Text>
+              <TextInput
+                style={styles.textInput}
+                value={name}
+                onChangeText={setName}
+                placeholder="Enter supplier name"
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+
+            {/* Supplier Code */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Supplier Code</Text>
+              <TextInput
+                style={styles.textInput}
+                value={code}
+                onChangeText={setCode}
+                placeholder="e.g., ES18, EG18, EG21"
+                placeholderTextColor="#9CA3AF"
+                autoCapitalize="characters"
+                maxLength={10}
+              />
+            </View>
+
+            {/* Karat Type */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Karat Type *</Text>
+              <View style={styles.radioGroup}>
+                <TouchableOpacity 
+                  style={[
+                    styles.radioOption,
+                    karatType === '18' && styles.radioOptionSelected
+                  ]}
+                  onPress={() => setKaratType('18')}
+                >
+                  <View style={[
+                    styles.radioButton,
+                    karatType === '18' && styles.radioButtonSelected
+                  ]}>
+                    {karatType === '18' && <View style={styles.radioButtonInner} />}
+                  </View>
+                  <Text style={[
+                    styles.radioLabel,
+                    karatType === '18' && styles.radioLabelSelected
+                  ]}>18 Karat</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[
+                    styles.radioOption,
+                    karatType === '21' && styles.radioOptionSelected
+                  ]}
+                  onPress={() => setKaratType('21')}
+                >
+                  <View style={[
+                    styles.radioButton,
+                    karatType === '21' && styles.radioButtonSelected
+                  ]}>
+                    {karatType === '21' && <View style={styles.radioButtonInner} />}
+                  </View>
+                  <Text style={[
+                    styles.radioLabel,
+                    karatType === '21' && styles.radioLabelSelected
+                  ]}>21 Karat</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Discount Tiers */}
+            <View style={styles.inputGroup}>
+              <View style={styles.tiersHeader}>
+                <Text style={styles.inputLabel}>Discount Tiers</Text>
+                <TouchableOpacity 
+                  style={styles.addTierButton}
+                  onPress={addTier}
+                >
+                  <Text style={styles.addTierButtonText}>+ Add Tier</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.inputSubLabel}>
+                Create custom discount tiers with thresholds and percentages
+              </Text>
+              
+              <View style={styles.tiersContainer}>
+                {tiers.map((tier, index) => (
+                  <View key={tier.id} style={styles.tierInputCard}>
+                    <View style={styles.tierHeader}>
+                      <Text style={styles.tierNumber}>Tier {index + 1}</Text>
+                      {tiers.length > 1 && (
+                        <TouchableOpacity 
+                          style={styles.removeTierButton}
+                          onPress={() => removeTier(tier.id)}
+                        >
+                          <Text style={styles.removeTierButtonText}>✕</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    
+                    <View style={styles.tierInputs}>
+                      <View style={styles.tierInputRow}>
+                        <Text style={styles.tierInputLabel}>Name</Text>
+                        <TextInput
+                          style={styles.tierTextInput}
+                          value={tier.name}
+                          onChangeText={(value) => updateTier(tier.id, 'name', value)}
+                          placeholder="e.g., Basic, Premium"
+                          placeholderTextColor="#9CA3AF"
+                        />
+                      </View>
+                      
+                      <View style={styles.tierInputRow}>
+                        <Text style={styles.tierInputLabel}>Threshold (g)</Text>
+                        <TextInput
+                          style={styles.tierTextInput}
+                          value={tier.threshold.toString()}
+                          onChangeText={(value) => updateTier(tier.id, 'threshold', parseInt(value) || 0)}
+                          placeholder="0"
+                          keyboardType="numeric"
+                          placeholderTextColor="#9CA3AF"
+                        />
+                      </View>
+                      
+                      <View style={styles.tierInputRow}>
+                        <Text style={styles.tierInputLabel}>Discount (%)</Text>
+                        <TextInput
+                          style={styles.tierTextInput}
+                          value={tier.discountPercentage.toString()}
+                          onChangeText={(value) => updateTier(tier.id, 'discountPercentage', parseFloat(value) || 0)}
+                          placeholder="0"
+                          keyboardType="numeric"
+                          placeholderTextColor="#9CA3AF"
+                        />
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* Info Card */}
+            <View style={styles.infoCard}>
+              <Text style={styles.infoCardTitle}>How Discount Tiers Work</Text>
+              <Text style={styles.infoCardText}>
+                • Create custom tiers with your own names and thresholds{'\n'}
+                • Threshold is the minimum grams required for that tier{'\n'}
+                • Tiers are applied based on monthly purchase totals{'\n'}
+                • You can have as many tiers as needed
+              </Text>
+            </View>
+          </View>
+
+          {/* Footer Buttons */}
+          <View style={styles.modalActions}>
+            <TouchableOpacity 
+              style={styles.cancelButton}
+              onPress={handleClose}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.confirmButton}
+              onPress={handleSubmit}
+            >
+              <Text style={styles.confirmButtonText}>Add Supplier</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
