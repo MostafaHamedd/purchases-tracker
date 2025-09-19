@@ -14,20 +14,21 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
-        tabBarButton: HapticTab,
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarButton: HapticTab,
         }}
       />
       <Tabs.Screen
-        name="purchases"
+        name="purchases/index"
         options={{
           title: 'Purchases',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="cart.fill" color={color} />,
+          tabBarButton: HapticTab,
         }}
       />
       <Tabs.Screen
@@ -37,17 +38,19 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="suppliers"
+        name="suppliers/index"
         options={{
           title: 'Suppliers',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="building.2.fill" color={color} />,
+          tabBarButton: HapticTab,
         }}
       />
       <Tabs.Screen
-        name="stores"
+        name="stores/index"
         options={{
           title: 'Stores',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="storefront.fill" color={color} />,
+          tabBarButton: HapticTab,
         }}
       />
     </Tabs>
