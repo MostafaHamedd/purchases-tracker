@@ -5,6 +5,33 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
+  topBackButton: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  topBackButtonText: {
+    fontSize: 16,
+    color: '#3B82F6',
+    fontWeight: '500',
+  },
+  purchaseHeader: {
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  purchaseTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  purchaseSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

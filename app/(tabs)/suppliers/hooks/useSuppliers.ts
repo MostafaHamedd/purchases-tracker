@@ -1,24 +1,6 @@
-import { useState, useEffect } from 'react';
 import { refreshEvents } from '@/data';
-
-export interface DiscountTier {
-  id: string;
-  name: string;
-  threshold: number; // Minimum grams for this tier
-  discountPercentage: number;
-  isProtected?: boolean; // Main tiers cannot be deleted
-}
-
-export type KaratType = '18' | '21';
-
-export interface Supplier {
-  id: string;
-  name: string;
-  code: string;
-  karatType: KaratType;
-  discountTiers: DiscountTier[];
-  isActive: boolean;
-}
+import { Supplier } from '@/data/types';
+import { useEffect, useState } from 'react';
 
 // Mock data - this will be replaced with API calls
 const mockSuppliers: Supplier[] = [

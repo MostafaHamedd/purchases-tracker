@@ -1,28 +1,17 @@
+import { AddSupplierDialogProps, KaratType } from '@/data/types';
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  Modal, 
-  Alert, 
-  ScrollView, 
-  KeyboardAvoidingView, 
-  Platform 
+import {
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { styles } from '../styles';
-import { DiscountTier, KaratType } from '../hooks/useSuppliers';
-
-interface AddSupplierDialogProps {
-  visible: boolean;
-  onClose: () => void;
-  onSubmitSupplier: (supplierData: {
-    name: string;
-    code: string;
-    karatType: KaratType;
-    discountTiers: DiscountTier[];
-  }) => void;
-}
 
 export function AddSupplierDialog({ 
   visible, 

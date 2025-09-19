@@ -1,12 +1,6 @@
+import { EditPaymentDialogProps } from '@/data/types';
 import React from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet } from 'react-native';
-
-interface EditPaymentDialogProps {
-  visible: boolean;
-  onClose: () => void;
-  onSubmit: (data: any) => void;
-  payment: any;
-}
+import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export function EditPaymentDialog({ visible, onClose, onSubmit }: EditPaymentDialogProps) {
   return (

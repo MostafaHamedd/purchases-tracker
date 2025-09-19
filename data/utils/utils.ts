@@ -112,7 +112,7 @@ export const getProgressBarColor = (purchase: Purchase): string => {
   
   // If overdue (after day 30 with any outstanding)
   if (daysLeft < 0) {
-    return '#B91C1C'; // Red-700 - Overdue
+    return '#B91C1C'; // Red-700 - Close to Deadline/Overdue
   }
   
   // Color progression based on days remaining (30-day payment terms)

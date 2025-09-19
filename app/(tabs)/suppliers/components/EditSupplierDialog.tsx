@@ -1,30 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  Modal, 
-  Alert, 
-  ScrollView, 
-  KeyboardAvoidingView, 
-  Platform 
+import { EditSupplierDialogProps, KaratType } from '@/data/types';
+import React, { useEffect, useState } from 'react';
+import {
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { styles } from '../styles';
-import { DiscountTier, Supplier, KaratType } from '../hooks/useSuppliers';
-
-interface EditSupplierDialogProps {
-  visible: boolean;
-  onClose: () => void;
-  onSubmitSupplier: (supplierData: {
-    id: string;
-    name: string;
-    code: string;
-    karatType: KaratType;
-    discountTiers: DiscountTier[];
-  }) => void;
-  supplier: Supplier | null;
-}
 
 export function EditSupplierDialog({ 
   visible, 

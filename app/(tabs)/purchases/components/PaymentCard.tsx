@@ -1,11 +1,6 @@
+import { PaymentCardProps } from '@/data/types';
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-
-interface PaymentCardProps {
-  payment: any;
-  onEdit: () => void;
-  onDelete: () => void;
-}
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export function PaymentCard({ payment, onEdit, onDelete }: PaymentCardProps) {
   return (

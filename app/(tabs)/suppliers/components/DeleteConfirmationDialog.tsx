@@ -1,14 +1,6 @@
+import { DeleteConfirmationDialogProps } from '@/data/types';
 import React from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
-
-interface DeleteConfirmationDialogProps {
-  visible: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  title: string;
-  message: string;
-  itemName?: string;
-}
+import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export function DeleteConfirmationDialog({
   visible,

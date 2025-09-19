@@ -1,18 +1,6 @@
-import { useState, useEffect } from 'react';
 import { refreshEvents } from '@/data';
-
-export interface Store {
-  id: string;
-  name: string;
-  code: string;
-  address: string;
-  phone?: string;
-  email?: string;
-  manager?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+import { Store } from '@/data/types';
+import { useState } from 'react';
 
 // Mock data for stores
 const mockStores: Store[] = [
@@ -20,11 +8,13 @@ const mockStores: Store[] = [
     id: '1',
     name: 'Main Store - Downtown',
     code: 'MSD',
-    address: '123 Main Street, Downtown, Cairo',
-    phone: '+20 2 1234 5678',
-    email: 'downtown@store.com',
-    manager: 'Ahmed Hassan',
     isActive: true,
+    progressBarConfig: {
+      red: 5,
+      orange: 10,
+      yellow: 15,
+      green: 20,
+    },
     createdAt: '2024-01-15T10:00:00Z',
     updatedAt: '2024-01-15T10:00:00Z',
   },
@@ -32,11 +22,13 @@ const mockStores: Store[] = [
     id: '2',
     name: 'Branch Store - Heliopolis',
     code: 'BSH',
-    address: '456 Heliopolis Square, Heliopolis, Cairo',
-    phone: '+20 2 2345 6789',
-    email: 'heliopolis@store.com',
-    manager: 'Fatma Ali',
     isActive: true,
+    progressBarConfig: {
+      red: 3,
+      orange: 7,
+      yellow: 12,
+      green: 18,
+    },
     createdAt: '2024-02-01T14:30:00Z',
     updatedAt: '2024-02-01T14:30:00Z',
   },
@@ -44,11 +36,13 @@ const mockStores: Store[] = [
     id: '3',
     name: 'Branch Store - Nasr City',
     code: 'BSN',
-    address: '789 Nasr City Plaza, Nasr City, Cairo',
-    phone: '+20 2 3456 7890',
-    email: 'nasrcity@store.com',
-    manager: 'Omar Mahmoud',
     isActive: false,
+    progressBarConfig: {
+      red: 7,
+      orange: 14,
+      yellow: 21,
+      green: 28,
+    },
     createdAt: '2024-02-15T09:15:00Z',
     updatedAt: '2024-03-01T16:45:00Z',
   },

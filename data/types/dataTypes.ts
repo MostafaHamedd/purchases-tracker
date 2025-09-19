@@ -57,11 +57,13 @@ export interface Store {
   id: string;
   name: string;
   code: string;
-  address: string;
-  phone?: string;
-  email?: string;
-  manager?: string;
   isActive: boolean;
+  progressBarConfig: {
+    red: number;
+    orange: number;
+    yellow: number;
+    green: number;
+  };
   createdAt: string;
   updatedAt: string;
 }

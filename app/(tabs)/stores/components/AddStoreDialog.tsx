@@ -1,30 +1,17 @@
+import { AddStoreDialogProps } from '@/data/types';
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  Modal, 
-  Alert, 
-  ScrollView, 
-  KeyboardAvoidingView, 
-  Platform 
+import {
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { styles } from '../styles';
-
-interface AddStoreDialogProps {
-  visible: boolean;
-  onClose: () => void;
-  onSubmitStore: (storeData: {
-    name: string;
-    code: string;
-    address: string;
-    phone?: string;
-    email?: string;
-    manager?: string;
-    isActive: boolean;
-  }) => void;
-}
 
 export function AddStoreDialog({ 
   visible, 
@@ -33,11 +20,13 @@ export function AddStoreDialog({
 }: AddStoreDialogProps) {
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
-  const [address, setAddress] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [manager, setManager] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [progressBarConfig, setProgressBarConfig] = useState({
+    red: 5,
+    orange: 10,
+    yellow: 15,
+    green: 20
+  });
 
   const handleSubmit = () => {
     // Validate inputs
@@ -51,20 +40,10 @@ export function AddStoreDialog({
       return;
     }
 
-    if (!address.trim()) {
-      Alert.alert('Validation Error', 'Please enter a store address');
-      return;
-    }
-
-    // Validate email format if provided
-    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      Alert.alert('Validation Error', 'Please enter a valid email address');
-      return;
-    }
-
-    // Validate phone format if provided
-    if (phone.trim() && !/^[\+]?[0-9\s\-\(\)]{10,}$/.test(phone.trim())) {
-      Alert.alert('Validation Error', 'Please enter a valid phone number');
+    // Validate progress bar configuration
+    if (progressBarConfig.red <= 0 || progressBarConfig.orange <= 0 || 
+        progressBarConfig.yellow <= 0 || progressBarConfig.green <= 0) {
+      Alert.alert('Validation Error', 'All progress bar days must be greater than 0');
       return;
     }
 
@@ -72,31 +51,32 @@ export function AddStoreDialog({
     onSubmitStore({
       name: name.trim(),
       code: code.trim().toUpperCase(),
-      address: address.trim(),
-      phone: phone.trim() || undefined,
-      email: email.trim() || undefined,
-      manager: manager.trim() || undefined,
       isActive,
+      progressBarConfig,
     });
 
     // Reset form
     setName('');
     setCode('');
-    setAddress('');
-    setPhone('');
-    setEmail('');
-    setManager('');
     setIsActive(true);
+    setProgressBarConfig({
+      red: 5,
+      orange: 10,
+      yellow: 15,
+      green: 20
+    });
   };
 
   const handleClose = () => {
     setName('');
     setCode('');
-    setAddress('');
-    setPhone('');
-    setEmail('');
-    setManager('');
     setIsActive(true);
+    setProgressBarConfig({
+      red: 5,
+      orange: 10,
+      yellow: 15,
+      green: 20
+    });
     onClose();
   };
 
@@ -151,58 +131,84 @@ export function AddStoreDialog({
               />
             </View>
 
-            {/* Store Address */}
+            {/* Progress Bar Configuration */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Address *</Text>
-              <TextInput
-                style={styles.textArea}
-                value={address}
-                onChangeText={setAddress}
-                placeholder="Enter complete store address"
-                placeholderTextColor="#9CA3AF"
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-              />
-            </View>
+              <Text style={styles.inputLabel}>Progress Bar Color Configuration</Text>
+              <Text style={styles.sectionDescription}>
+                Configure how many days each color should show for this store
+              </Text>
+              
+              {/* Red Progress Bar */}
+              <View style={styles.colorConfigRow}>
+                <View style={[styles.colorIndicator, { backgroundColor: '#EF4444' }]} />
+                <Text style={styles.colorLabel}>Red (Close to Deadline/Overdue):</Text>
+                <TextInput
+                  style={styles.daysInput}
+                  value={progressBarConfig.red.toString()}
+                  onChangeText={(text) => setProgressBarConfig(prev => ({ 
+                    ...prev, 
+                    red: parseInt(text) || 0 
+                  }))}
+                  placeholder="5"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="numeric"
+                />
+                <Text style={styles.daysLabel}>days</Text>
+              </View>
 
-            {/* Phone Number */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Phone Number</Text>
-              <TextInput
-                style={styles.textInput}
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="+20 2 1234 5678"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="phone-pad"
-              />
-            </View>
+              {/* Orange Progress Bar */}
+              <View style={styles.colorConfigRow}>
+                <View style={[styles.colorIndicator, { backgroundColor: '#F59E0B' }]} />
+                <Text style={styles.colorLabel}>Orange (Urgent):</Text>
+                <TextInput
+                  style={styles.daysInput}
+                  value={progressBarConfig.orange.toString()}
+                  onChangeText={(text) => setProgressBarConfig(prev => ({ 
+                    ...prev, 
+                    orange: parseInt(text) || 0 
+                  }))}
+                  placeholder="10"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="numeric"
+                />
+                <Text style={styles.daysLabel}>days</Text>
+              </View>
 
-            {/* Email */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Email</Text>
-              <TextInput
-                style={styles.textInput}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="store@example.com"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
+              {/* Yellow Progress Bar */}
+              <View style={styles.colorConfigRow}>
+                <View style={[styles.colorIndicator, { backgroundColor: '#FDE047' }]} />
+                <Text style={styles.colorLabel}>Yellow (Warning):</Text>
+                <TextInput
+                  style={styles.daysInput}
+                  value={progressBarConfig.yellow.toString()}
+                  onChangeText={(text) => setProgressBarConfig(prev => ({ 
+                    ...prev, 
+                    yellow: parseInt(text) || 0 
+                  }))}
+                  placeholder="15"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="numeric"
+                />
+                <Text style={styles.daysLabel}>days</Text>
+              </View>
 
-            {/* Manager */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Manager Name</Text>
-              <TextInput
-                style={styles.textInput}
-                value={manager}
-                onChangeText={setManager}
-                placeholder="Enter manager name"
-                placeholderTextColor="#9CA3AF"
-              />
+              {/* Green Progress Bar */}
+              <View style={styles.colorConfigRow}>
+                <View style={[styles.colorIndicator, { backgroundColor: '#10B981' }]} />
+                <Text style={styles.colorLabel}>Green (Good):</Text>
+                <TextInput
+                  style={styles.daysInput}
+                  value={progressBarConfig.green.toString()}
+                  onChangeText={(text) => setProgressBarConfig(prev => ({ 
+                    ...prev, 
+                    green: parseInt(text) || 0 
+                  }))}
+                  placeholder="20"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="numeric"
+                />
+                <Text style={styles.daysLabel}>days</Text>
+              </View>
             </View>
 
             {/* Status Toggle */}
@@ -223,12 +229,12 @@ export function AddStoreDialog({
 
             {/* Info Card */}
             <View style={styles.infoCard}>
-              <Text style={styles.infoCardTitle}>Store Information</Text>
+              <Text style={styles.infoCardTitle}>Store Configuration</Text>
               <Text style={styles.infoCardText}>
                 • Store code must be unique and will be used for identification{'\n'}
-                • Address should include complete location details{'\n'}
-                • Phone and email are optional but recommended{'\n'}
-                • Manager name helps with store management
+                • Progress bar colors help you track payment urgency{'\n'}
+                • Red = Close to Deadline/Overdue, Orange = Urgent, Yellow = Warning, Green = Good{'\n'}
+                • Configure days based on each store's payment behavior
               </Text>
             </View>
           </View>

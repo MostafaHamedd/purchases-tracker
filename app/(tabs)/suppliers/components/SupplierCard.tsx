@@ -1,12 +1,6 @@
+import { SupplierCardProps } from '@/data/types';
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Supplier, DiscountTier } from '../hooks/useSuppliers';
-
-interface SupplierCardProps {
-  supplier: Supplier;
-  onDelete?: (supplierId: string) => void;
-  onEdit?: (supplier: Supplier) => void;
-}
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export function SupplierCard({ supplier, onDelete, onEdit }: SupplierCardProps) {
   return (

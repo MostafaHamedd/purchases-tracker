@@ -1,33 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  Modal, 
-  Alert, 
-  ScrollView, 
-  KeyboardAvoidingView, 
-  Platform 
+import { EditStoreDialogProps } from '@/data/types';
+import React, { useEffect, useState } from 'react';
+import {
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { styles } from '../styles';
-import { Store } from '../hooks/useStores';
-
-interface EditStoreDialogProps {
-  visible: boolean;
-  onClose: () => void;
-  onSubmitStore: (storeData: {
-    id: string;
-    name: string;
-    code: string;
-    address: string;
-    phone?: string;
-    email?: string;
-    manager?: string;
-    isActive: boolean;
-  }) => void;
-  store: Store | null;
-}
 
 export function EditStoreDialog({ 
   visible, 

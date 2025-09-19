@@ -1,12 +1,7 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { PurchaseCardProps } from '@/data';
 import { useRouter } from 'expo-router';
-import { Purchase } from '@/data';
-
-interface PurchaseCardProps {
-  purchase: Purchase;
-  onRefresh: () => void;
-}
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export function PurchaseCard({ purchase, onRefresh }: PurchaseCardProps) {
   const router = useRouter();
@@ -23,6 +18,21 @@ export function PurchaseCard({ purchase, onRefresh }: PurchaseCardProps) {
       case 'Overdue': return '#EF4444';
       default: return '#6B7280';
     }
+  };
+
+  const getProgressBarColor = (daysLeft: number) => {
+    if (daysLeft <= 0) return '#EF4444'; // Red for close to deadline/overdue
+    if (daysLeft <= 5) return '#EF4444'; // Red for urgent (4 days left)
+    if (daysLeft <= 10) return '#F59E0B'; // Orange for warning (9 days left)
+    return '#3B82F6'; // Blue for normal
+  };
+
+  const getProgressPercentage = (daysLeft: number) => {
+    // Assuming a 30-day period for progress calculation
+    const totalDays = 30;
+    if (daysLeft <= 0) return 100; // Close to deadline/overdue = full bar
+    if (daysLeft >= totalDays) return 0; // More than 30 days = empty bar
+    return ((totalDays - daysLeft) / totalDays) * 100;
   };
 
   const getDaysLeft = (dueDate: string) => {
@@ -72,10 +82,13 @@ export function PurchaseCard({ purchase, onRefresh }: PurchaseCardProps) {
         <Text style={styles.storeName}>{purchase.store}</Text>
       </View>
 
-      <View style={[styles.progressBar, { backgroundColor: getStatusColor(purchase.status) }]}>
+      <View style={styles.progressBarContainer}>
+        <View style={[styles.progressBar, { backgroundColor: getProgressBarColor(daysLeft), width: `${getProgressPercentage(daysLeft)}%` }]} />
         <View style={styles.progressContent}>
           <Text style={styles.progressGrams}>{remainingGrams}g</Text>
-          <Text style={styles.progressDays}>{daysLeft} days left</Text>
+          <Text style={styles.progressDays}>
+            {daysLeft <= 0 ? `${Math.abs(daysLeft)} days overdue` : `${daysLeft} days left`}
+          </Text>
         </View>
       </View>
 
@@ -175,25 +188,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
   },
-  progressBar: {
+  progressBarContainer: {
     height: 32,
+    backgroundColor: '#E5E7EB',
     borderRadius: 16,
     marginBottom: 16,
-    justifyContent: 'center',
-    paddingHorizontal: 16,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 16,
   },
   progressContent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 16,
   },
   progressGrams: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontSize: 16,
     fontWeight: '600',
   },
   progressDays: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontSize: 14,
     fontWeight: '500',
   },

@@ -1,20 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  StyleSheet, 
+import { DeleteConfirmationDialog } from '@/app/(tabs)/purchases/components/DeleteConfirmationDialog';
+import { PaymentService } from '@/data';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import {
+  Alert,
+  ScrollView,
+  Text,
   TouchableOpacity,
-  Alert
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ThemedText } from '@/components/themed-text';
-import { PurchaseService, PaymentService } from '@/data';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { PaymentCard } from './components/PaymentCard';
 import { AddPaymentDialog } from './components/AddPaymentDialog';
 import { EditPaymentDialog } from './components/EditPaymentDialog';
-import { DeleteConfirmationDialog } from '@/app/(tabs)/purchases/components/DeleteConfirmationDialog';
+import { PaymentCard } from './components/PaymentCard';
+import { SupplierReceiptCard } from './components/SupplierReceiptCard';
 import { usePurchaseDetail } from './hooks/usePurchaseDetail';
 import { styles } from './purchaseDetailStyles';
 
@@ -36,7 +35,7 @@ export default function PurchaseDetailScreen() {
           <Text style={styles.errorText}>Purchase not found</Text>
           <TouchableOpacity 
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={() => router.push('/(tabs)/purchases')}
           >
             <Text style={styles.backButtonText}>Go Back</Text>
           </TouchableOpacity>
@@ -78,30 +77,59 @@ export default function PurchaseDetailScreen() {
     }
   };
 
-  const getDaysLeft = (dueDate: string) => {
+  const getDaysLeft = (dueDate: string): number => {
+    if (!dueDate) return 0;
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
     const diffTime = due.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  const daysLeft = getDaysLeft(purchase.dueDate);
+  const getDaysLeftText = (dueDate: string): string => {
+    if (!dueDate) return 'Not set';
+    const daysLeft = getDaysLeft(dueDate);
+    if (daysLeft < 0) {
+      return `${Math.abs(daysLeft)} days overdue`;
+    } else if (daysLeft === 0) {
+      return 'Due today';
+    } else if (daysLeft === 1) {
+      return '1 day left';
+    } else {
+      return `${daysLeft} days left`;
+    }
+  };
+
+  const getDaysLeftColor = (dueDate: string) => {
+    if (!dueDate) return { color: '#6B7280' };
+    const daysLeft = getDaysLeft(dueDate);
+    if (daysLeft < 0) {
+      return { color: '#EF4444' }; // Red for overdue
+    } else if (daysLeft <= 3) {
+      return { color: '#F59E0B' }; // Orange for urgent
+    } else if (daysLeft <= 7) {
+      return { color: '#FDE047' }; // Yellow for warning
+    } else {
+      return { color: '#10B981' }; // Green for good
+    }
+  };
+
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <ThemedText type="title" style={styles.title}>Purchase #{purchase.id}</ThemedText>
-          <Text style={styles.subtitle}>{purchase.store} • {purchase.date}</Text>
-        </View>
+      {/* Back Button */}
+      <TouchableOpacity 
+        style={styles.topBackButton}
+        onPress={() => router.push('/(tabs)/purchases')}
+      >
+        <Text style={styles.topBackButtonText}>← Back</Text>
+      </TouchableOpacity>
+
+      {/* Purchase Header */}
+      <View style={styles.purchaseHeader}>
+        <Text style={styles.purchaseTitle}>Purchase #{purchase.id}</Text>
+        <Text style={styles.purchaseSubtitle}>{purchase.store} • {purchase.date}</Text>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -117,62 +145,35 @@ export default function PurchaseDetailScreen() {
           <View style={styles.infoContent}>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Total Grams:</Text>
-              <Text style={styles.infoValue}>{purchase.totalGrams}g</Text>
+              <Text style={styles.infoValue}>{purchase.totalGrams || 0}g</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Base Fees:</Text>
-              <Text style={styles.infoValue}>EGP {purchase.totalFees.toLocaleString()}</Text>
+              <Text style={styles.infoValue}>EGP {(purchase.totalFees || 0).toLocaleString()}</Text>
             </View>
             <View style={styles.infoRow}>
-              <Text style={[styles.infoLabel, styles.discountLabel]}>Discount:</Text>
-              <Text style={[styles.infoValue, styles.discountValue]}>-EGP {(purchase.totalFees - purchase.totalDiscount).toLocaleString()}</Text>
+              <Text style={styles.infoLabel}>Discount:</Text>
+              <Text style={[styles.infoValue, styles.discountValue]}>EGP {(purchase.totalDiscount || 0).toLocaleString()}</Text>
             </View>
             <View style={styles.infoRow}>
-              <Text style={[styles.infoLabel, styles.netFeeLabel]}>Net Fees:</Text>
-              <Text style={[styles.infoValue, styles.netFeeValue]}>-EGP {purchase.totalDiscount.toLocaleString()}</Text>
+              <Text style={styles.infoLabel}>Net Fees:</Text>
+              <Text style={styles.infoValue}>EGP {((purchase.totalFees || 0) - (purchase.totalDiscount || 0)).toLocaleString()}</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Due Date:</Text>
-              <Text style={styles.infoValue}>{purchase.dueDate}</Text>
+              <Text style={styles.infoValue}>{purchase.dueDate || 'Not set'}</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Days Left:</Text>
-              <Text style={[styles.infoValue, daysLeft < 0 && styles.overdueText]}>
-                {daysLeft < 0 ? `${Math.abs(daysLeft)} days overdue` : `${daysLeft} days left`}
+              <Text style={[styles.infoValue, getDaysLeftColor(purchase.dueDate)]}>
+                {getDaysLeftText(purchase.dueDate)}
               </Text>
             </View>
           </View>
         </View>
 
         {/* Supplier Receipts Card */}
-        <View style={styles.suppliersCard}>
-          <Text style={styles.cardTitle}>Supplier Receipts</Text>
-          <View style={styles.suppliersContent}>
-            {Object.entries(purchase.suppliers).map(([supplier, grams]) => (
-              <View key={supplier} style={styles.supplierSection}>
-                <Text style={styles.supplierTitle}>{supplier}</Text>
-                <View style={styles.supplierDetails}>
-                  <View style={styles.supplierRow}>
-                    <Text style={styles.supplierLabel}>Grams:</Text>
-                    <Text style={styles.supplierValue}>{grams}g</Text>
-                  </View>
-                  <View style={styles.supplierRow}>
-                    <Text style={styles.supplierLabel}>Base Fee:</Text>
-                    <Text style={styles.supplierValue}>EGP {(grams * 5).toLocaleString()}</Text>
-                  </View>
-                  <View style={styles.supplierRow}>
-                    <Text style={[styles.supplierLabel, styles.discountLabel]}>Discount (10 EGP/g):</Text>
-                    <Text style={[styles.supplierValue, styles.discountValue]}>-EGP {(grams * 10).toLocaleString()}</Text>
-                  </View>
-                  <View style={styles.supplierRow}>
-                    <Text style={[styles.supplierLabel, styles.netFeeLabel]}>Net Fee:</Text>
-                    <Text style={[styles.supplierValue, styles.netFeeValue]}>-EGP {(grams * 5).toLocaleString()}</Text>
-                  </View>
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
+        <SupplierReceiptCard suppliers={purchase.suppliers} />
 
         {/* Payment History */}
         <View style={styles.paymentsCard}>
@@ -216,6 +217,12 @@ export default function PurchaseDetailScreen() {
           Alert.alert('Success', 'Payment added successfully!');
         }}
         purchaseId={purchase.id}
+        purchase={{
+          totalGrams: purchase.totalGrams || 0,
+          netFees: (purchase.totalFees || 0) - (purchase.totalDiscount || 0),
+          totalFees: purchase.totalFees || 0,
+          totalDiscount: purchase.totalDiscount || 0
+        }}
       />
 
       <EditPaymentDialog

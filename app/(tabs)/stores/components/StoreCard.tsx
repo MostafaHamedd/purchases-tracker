@@ -1,12 +1,6 @@
+import { StoreCardProps } from '@/data/types';
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Store } from '../hooks/useStores';
-
-interface StoreCardProps {
-  store: Store;
-  onDelete?: (storeId: string) => void;
-  onEdit?: (store: Store) => void;
-}
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export function StoreCard({ store, onDelete, onEdit }: StoreCardProps) {
   return (
