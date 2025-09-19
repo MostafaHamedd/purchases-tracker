@@ -34,7 +34,6 @@ export default function TabLayout() {
         name="purchases/[id]"
         options={{
           href: null, // This hides the route from the tab bar
-          tabBarButton: () => null, // Alternative way to hide from tab bar
         }}
       />
       <Tabs.Screen
