@@ -1,8 +1,6 @@
 // Core data types for database objects
 // These types represent the main entities that will be stored in the database
 
-import { StatusType } from '../constants';
-
 // Core Entity Types
 export interface Payment {
   id: string;
@@ -15,17 +13,13 @@ export interface Payment {
 export interface Purchase {
   id: string;
   date: string;
-  store: 'Store A' | 'Store B';
-  status: StatusType;
+  storeId: string; // Reference to Store.id
+  status: PurchaseStatus;
   totalGrams: number;
   totalFees: number;
   totalDiscount: number;
   dueDate: string;
-  suppliers: {
-    ES18: number;
-    EG18: number;
-    EG21: number;
-  };
+  suppliers: Record<string, number>; // Dynamic supplier codes with gram amounts
   payments: {
     gramsPaid: number;
     feesPaid: number;
@@ -33,7 +27,7 @@ export interface Purchase {
   paymentHistory: Payment[];
 }
 
-export type KaratType = '18' | '21';
+export type KaratType = '18' | '21' | '22' | '24';
 export type PurchaseStatus = 'Paid' | 'Pending' | 'Partial' | 'Overdue';
 
 export interface DiscountTier {
@@ -53,17 +47,19 @@ export interface Supplier {
   isActive: boolean;
 }
 
+export interface ProgressBarConfig {
+  blue: number;    // First 15 days - Good status
+  yellow: number;  // Next 5 days - Warning
+  orange: number;  // Next 5 days - Urgent
+  red: number;     // Last 5 days - Critical/Overdue
+}
+
 export interface Store {
   id: string;
   name: string;
   code: string;
   isActive: boolean;
-  progressBarConfig: {
-    red: number;
-    orange: number;
-    yellow: number;
-    green: number;
-  };
+  progressBarConfig: ProgressBarConfig;
   createdAt: string;
   updatedAt: string;
 }

@@ -1,10 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { Link } from 'expo-router';
-
-const { width } = Dimensions.get('window');
+import React from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
   return (
@@ -147,7 +145,7 @@ export default function HomeScreen() {
               </View>
               <View style={styles.activityContent}>
                 <Text style={styles.activityTitle}>New Purchase</Text>
-                <Text style={styles.activitySubtitle}>Store A - 300g mixed gold</Text>
+                <Text style={styles.activitySubtitle}>Main Store - 300g mixed gold</Text>
                 <Text style={styles.activityTime}>5 hours ago</Text>
               </View>
             </View>

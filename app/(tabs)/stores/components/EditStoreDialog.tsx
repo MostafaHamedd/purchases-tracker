@@ -1,4 +1,5 @@
-import { EditStoreDialogProps } from '@/data/types';
+import { defaultProgressBarConfig } from '@/data/mockData';
+import { EditStoreDialogProps, ProgressBarConfig } from '@/data/types';
 import React, { useEffect, useState } from 'react';
 import {
     Alert,
@@ -21,22 +22,16 @@ export function EditStoreDialog({
 }: EditStoreDialogProps) {
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
-  const [address, setAddress] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [manager, setManager] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [progressBarConfig, setProgressBarConfig] = useState(defaultProgressBarConfig);
 
   // Initialize form when store changes
   useEffect(() => {
     if (store) {
       setName(store.name);
       setCode(store.code);
-      setAddress(store.address);
-      setPhone(store.phone || '');
-      setEmail(store.email || '');
-      setManager(store.manager || '');
       setIsActive(store.isActive);
+      setProgressBarConfig(store.progressBarConfig);
     }
   }, [store]);
 
@@ -54,20 +49,17 @@ export function EditStoreDialog({
       return;
     }
 
-    if (!address.trim()) {
-      Alert.alert('Validation Error', 'Please enter a store address');
+    // Validate progress bar configuration
+    if (progressBarConfig.blue <= 0 || progressBarConfig.yellow <= 0 || 
+        progressBarConfig.orange <= 0 || progressBarConfig.red <= 0) {
+      Alert.alert('Validation Error', 'All progress bar values must be greater than 0');
       return;
     }
 
-    // Validate email format if provided
-    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      Alert.alert('Validation Error', 'Please enter a valid email address');
-      return;
-    }
-
-    // Validate phone format if provided
-    if (phone.trim() && !/^[\+]?[0-9\s\-\(\)]{10,}$/.test(phone.trim())) {
-      Alert.alert('Validation Error', 'Please enter a valid phone number');
+    // Validate total days (should be 30)
+    const totalDays = progressBarConfig.blue + progressBarConfig.yellow + progressBarConfig.orange + progressBarConfig.red;
+    if (totalDays !== 30) {
+      Alert.alert('Validation Error', `Total days must equal 30 (currently ${totalDays})`);
       return;
     }
 
@@ -76,31 +68,22 @@ export function EditStoreDialog({
       id: store.id,
       name: name.trim(),
       code: code.trim().toUpperCase(),
-      address: address.trim(),
-      phone: phone.trim() || undefined,
-      email: email.trim() || undefined,
-      manager: manager.trim() || undefined,
       isActive,
+      progressBarConfig,
     });
 
     // Reset form
     setName('');
     setCode('');
-    setAddress('');
-    setPhone('');
-    setEmail('');
-    setManager('');
     setIsActive(true);
+    setProgressBarConfig(defaultProgressBarConfig);
   };
 
   const handleClose = () => {
     setName('');
     setCode('');
-    setAddress('');
-    setPhone('');
-    setEmail('');
-    setManager('');
     setIsActive(true);
+    setProgressBarConfig(defaultProgressBarConfig);
     onClose();
   };
 
@@ -157,58 +140,91 @@ export function EditStoreDialog({
               />
             </View>
 
-            {/* Store Address */}
+            {/* Progress Bar Configuration */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Address *</Text>
-              <TextInput
-                style={styles.textArea}
-                value={address}
-                onChangeText={setAddress}
-                placeholder="Enter complete store address"
-                placeholderTextColor="#9CA3AF"
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-              />
-            </View>
+              <Text style={styles.inputLabel}>Progress Bar Color Configuration</Text>
+              <Text style={styles.sectionDescription}>
+                Configure how many days each color should show for payment urgency (Total: 30 days)
+              </Text>
+              
+              {/* Blue Progress Bar */}
+              <View style={styles.colorConfigRow}>
+                <View style={[styles.colorIndicator, { backgroundColor: '#3B82F6' }]} />
+                <Text style={styles.colorLabel}>Blue (Good - First 15 days):</Text>
+                <TextInput
+                  style={styles.daysInput}
+                  value={progressBarConfig.blue.toString()}
+                  onChangeText={(text) => setProgressBarConfig((prev: ProgressBarConfig) => ({ 
+                    ...prev, 
+                    blue: parseInt(text) || 0 
+                  }))}
+                  placeholder="15"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="numeric"
+                />
+                <Text style={styles.daysLabel}>days</Text>
+              </View>
 
-            {/* Phone Number */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Phone Number</Text>
-              <TextInput
-                style={styles.textInput}
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="+20 2 1234 5678"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="phone-pad"
-              />
-            </View>
+              {/* Yellow Progress Bar */}
+              <View style={styles.colorConfigRow}>
+                <View style={[styles.colorIndicator, { backgroundColor: '#FDE047' }]} />
+                <Text style={styles.colorLabel}>Yellow (Warning - Next 5 days):</Text>
+                <TextInput
+                  style={styles.daysInput}
+                  value={progressBarConfig.yellow.toString()}
+                  onChangeText={(text) => setProgressBarConfig((prev: ProgressBarConfig) => ({ 
+                    ...prev, 
+                    yellow: parseInt(text) || 0 
+                  }))}
+                  placeholder="5"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="numeric"
+                />
+                <Text style={styles.daysLabel}>days</Text>
+              </View>
 
-            {/* Email */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Email</Text>
-              <TextInput
-                style={styles.textInput}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="store@example.com"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
+              {/* Orange Progress Bar */}
+              <View style={styles.colorConfigRow}>
+                <View style={[styles.colorIndicator, { backgroundColor: '#F59E0B' }]} />
+                <Text style={styles.colorLabel}>Orange (Urgent - Next 5 days):</Text>
+                <TextInput
+                  style={styles.daysInput}
+                  value={progressBarConfig.orange.toString()}
+                  onChangeText={(text) => setProgressBarConfig((prev: ProgressBarConfig) => ({ 
+                    ...prev, 
+                    orange: parseInt(text) || 0 
+                  }))}
+                  placeholder="5"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="numeric"
+                />
+                <Text style={styles.daysLabel}>days</Text>
+              </View>
 
-            {/* Manager */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Manager Name</Text>
-              <TextInput
-                style={styles.textInput}
-                value={manager}
-                onChangeText={setManager}
-                placeholder="Enter manager name"
-                placeholderTextColor="#9CA3AF"
-              />
+              {/* Red Progress Bar */}
+              <View style={styles.colorConfigRow}>
+                <View style={[styles.colorIndicator, { backgroundColor: '#EF4444' }]} />
+                <Text style={styles.colorLabel}>Red (Critical - Last 5 days):</Text>
+                <TextInput
+                  style={styles.daysInput}
+                  value={progressBarConfig.red.toString()}
+                  onChangeText={(text) => setProgressBarConfig((prev: ProgressBarConfig) => ({ 
+                    ...prev, 
+                    red: parseInt(text) || 0 
+                  }))}
+                  placeholder="5"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="numeric"
+                />
+                <Text style={styles.daysLabel}>days</Text>
+              </View>
+
+              {/* Green Status Info */}
+              <View style={styles.infoRow}>
+                <View style={[styles.colorIndicator, { backgroundColor: '#10B981' }]} />
+                <Text style={styles.colorLabel}>Green (Paid):</Text>
+                <Text style={styles.infoText}>Automatically shown when payment is complete</Text>
+              </View>
             </View>
 
             {/* Status Toggle */}
@@ -229,12 +245,13 @@ export function EditStoreDialog({
 
             {/* Info Card */}
             <View style={styles.infoCard}>
-              <Text style={styles.infoCardTitle}>Editing Store Information</Text>
+              <Text style={styles.infoCardTitle}>Store Configuration</Text>
               <Text style={styles.infoCardText}>
-                • All fields can be edited except creation date{'\n'}
+                • Configure progress bar colors for payment urgency (30-day cycle){'\n'}
+                • Blue = Good (15 days), Yellow = Warning (5 days), Orange = Urgent (5 days), Red = Critical (5 days){'\n'}
+                • Green = Automatically shown when payment is fully paid{'\n'}
                 • Store code should remain unique{'\n'}
-                • Status change affects store availability{'\n'}
-                • Changes are saved immediately
+                • Status change affects store availability
               </Text>
             </View>
           </View>

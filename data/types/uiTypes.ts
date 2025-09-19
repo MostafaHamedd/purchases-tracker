@@ -1,5 +1,5 @@
 // UI and filter-related types
-import { Payment, Purchase, Store, Supplier } from './dataTypes';
+import { DiscountTier, KaratType, Payment, ProgressBarConfig, Purchase, Store, Supplier } from './dataTypes';
 
 // Filter and search types
 export interface PurchaseFilters {
@@ -64,7 +64,7 @@ export interface AddStoreDialogProps {
 export interface EditStoreDialogProps {
   visible: boolean;
   onClose: () => void;
-  onSubmitStore: (storeData: StoreFormData) => void;
+  onSubmitStore: (storeData: StoreFormData & { id: string }) => void;
   store?: Store;
 }
 
@@ -106,7 +106,7 @@ export interface DeleteConfirmationDialogProps {
 // Form Data Types
 export interface PurchaseFormData {
   id: string;
-  store: string;
+  storeId: string;
   date: string;
   totalGrams: number;
   suppliers: Record<string, number>;
@@ -134,16 +134,9 @@ export interface StoreFormData {
 export interface SupplierFormData {
   name: string;
   code: string;
-  karatType: '18' | '21';
+  karatType: KaratType;
   discountTiers: DiscountTier[];
   isActive: boolean;
-}
-
-export interface ProgressBarConfig {
-  red: number;
-  orange: number;
-  yellow: number;
-  green: number;
 }
 
 export interface PurchaseSummaryData {

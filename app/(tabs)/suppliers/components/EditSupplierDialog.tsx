@@ -1,4 +1,5 @@
-import { EditSupplierDialogProps, KaratType } from '@/data/types';
+import { availableKaratTypes } from '@/data/mockData';
+import { DiscountTier, EditSupplierDialogProps, KaratType } from '@/data/types';
 import React, { useEffect, useState } from 'react';
 import {
     Alert,
@@ -186,42 +187,27 @@ export function EditSupplierDialog({
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Karat Type *</Text>
               <View style={styles.radioGroup}>
-                <TouchableOpacity 
-                  style={[
-                    styles.radioOption,
-                    karatType === '18' && styles.radioOptionSelected
-                  ]}
-                  onPress={() => setKaratType('18')}
-                >
-                  <View style={[
-                    styles.radioButton,
-                    karatType === '18' && styles.radioButtonSelected
-                  ]}>
-                    {karatType === '18' && <View style={styles.radioButtonInner} />}
-                  </View>
-                  <Text style={[
-                    styles.radioLabel,
-                    karatType === '18' && styles.radioLabelSelected
-                  ]}>18 Karat</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[
-                    styles.radioOption,
-                    karatType === '21' && styles.radioOptionSelected
-                  ]}
-                  onPress={() => setKaratType('21')}
-                >
-                  <View style={[
-                    styles.radioButton,
-                    karatType === '21' && styles.radioButtonSelected
-                  ]}>
-                    {karatType === '21' && <View style={styles.radioButtonInner} />}
-                  </View>
-                  <Text style={[
-                    styles.radioLabel,
-                    karatType === '21' && styles.radioLabelSelected
-                  ]}>21 Karat</Text>
-                </TouchableOpacity>
+                {availableKaratTypes.map((karat: KaratType) => (
+                  <TouchableOpacity 
+                    key={karat}
+                    style={[
+                      styles.radioOption,
+                      karatType === karat && styles.radioOptionSelected
+                    ]}
+                    onPress={() => setKaratType(karat)}
+                  >
+                    <View style={[
+                      styles.radioButton,
+                      karatType === karat && styles.radioButtonSelected
+                    ]}>
+                      {karatType === karat && <View style={styles.radioButtonInner} />}
+                    </View>
+                    <Text style={[
+                      styles.radioLabel,
+                      karatType === karat && styles.radioLabelSelected
+                    ]}>{karat} Karat</Text>
+                  </TouchableOpacity>
+                ))}
               </View>
             </View>
 

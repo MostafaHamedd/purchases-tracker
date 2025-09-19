@@ -10,6 +10,7 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useStores } from '../stores/hooks/useStores';
 import { AddPaymentDialog } from './components/AddPaymentDialog';
 import { EditPaymentDialog } from './components/EditPaymentDialog';
 import { PaymentCard } from './components/PaymentCard';
@@ -20,6 +21,7 @@ import { styles } from './purchaseDetailStyles';
 export default function PurchaseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { stores } = useStores();
   const [showAddPaymentDialog, setShowAddPaymentDialog] = useState(false);
   const [showEditPaymentDialog, setShowEditPaymentDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -27,6 +29,18 @@ export default function PurchaseDetailScreen() {
   const [paymentToDelete, setPaymentToDelete] = useState<{ id: string; date: string } | null>(null);
   
   const { purchase, payments, refreshPurchase } = usePurchaseDetail(id!);
+  
+  // Find the store associated with this purchase
+  const store = stores.find(s => s.id === purchase?.storeId);
+  
+  // Format date to show month name and day
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const month = date.toLocaleDateString('en-US', { month: 'long' });
+    const day = date.getDate();
+    const year = date.getFullYear();
+    return `${month} ${day}, ${year}`;
+  };
 
   if (!purchase) {
     return (
@@ -129,7 +143,7 @@ export default function PurchaseDetailScreen() {
       {/* Purchase Header */}
       <View style={styles.purchaseHeader}>
         <Text style={styles.purchaseTitle}>Purchase #{purchase.id}</Text>
-        <Text style={styles.purchaseSubtitle}>{purchase.store} • {purchase.date}</Text>
+        <Text style={styles.purchaseSubtitle}>{store?.code || 'Unknown Store'} • {formatDate(purchase.date)}</Text>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>

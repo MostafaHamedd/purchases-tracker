@@ -1,15 +1,16 @@
-import { AddStoreDialogProps } from '@/data/types';
+import { defaultProgressBarConfig } from '@/data/mockData';
+import { AddStoreDialogProps, ProgressBarConfig } from '@/data/types';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { styles } from '../styles';
 
@@ -21,12 +22,7 @@ export function AddStoreDialog({
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [isActive, setIsActive] = useState(true);
-  const [progressBarConfig, setProgressBarConfig] = useState({
-    red: 5,
-    orange: 10,
-    yellow: 15,
-    green: 20
-  });
+  const [progressBarConfig, setProgressBarConfig] = useState(defaultProgressBarConfig);
 
   const handleSubmit = () => {
     // Validate inputs
@@ -41,9 +37,16 @@ export function AddStoreDialog({
     }
 
     // Validate progress bar configuration
-    if (progressBarConfig.red <= 0 || progressBarConfig.orange <= 0 || 
-        progressBarConfig.yellow <= 0 || progressBarConfig.green <= 0) {
+    if (progressBarConfig.blue <= 0 || progressBarConfig.yellow <= 0 || 
+        progressBarConfig.orange <= 0 || progressBarConfig.red <= 0) {
       Alert.alert('Validation Error', 'All progress bar days must be greater than 0');
+      return;
+    }
+
+    // Validate total days (should be 30)
+    const totalDays = progressBarConfig.blue + progressBarConfig.yellow + progressBarConfig.orange + progressBarConfig.red;
+    if (totalDays !== 30) {
+      Alert.alert('Validation Error', `Total days must equal 30 (currently ${totalDays})`);
       return;
     }
 
@@ -59,24 +62,14 @@ export function AddStoreDialog({
     setName('');
     setCode('');
     setIsActive(true);
-    setProgressBarConfig({
-      red: 5,
-      orange: 10,
-      yellow: 15,
-      green: 20
-    });
+    setProgressBarConfig(defaultProgressBarConfig);
   };
 
   const handleClose = () => {
     setName('');
     setCode('');
     setIsActive(true);
-    setProgressBarConfig({
-      red: 5,
-      orange: 10,
-      yellow: 15,
-      green: 20
-    });
+    setProgressBarConfig(defaultProgressBarConfig);
     onClose();
   };
 
@@ -135,19 +128,37 @@ export function AddStoreDialog({
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Progress Bar Color Configuration</Text>
               <Text style={styles.sectionDescription}>
-                Configure how many days each color should show for this store
+                Configure how many days each color should show for payment urgency (Total: 30 days)
               </Text>
               
-              {/* Red Progress Bar */}
+              {/* Blue Progress Bar */}
               <View style={styles.colorConfigRow}>
-                <View style={[styles.colorIndicator, { backgroundColor: '#EF4444' }]} />
-                <Text style={styles.colorLabel}>Red (Close to Deadline/Overdue):</Text>
+                <View style={[styles.colorIndicator, { backgroundColor: '#3B82F6' }]} />
+                <Text style={styles.colorLabel}>Blue (Good - First 15 days):</Text>
                 <TextInput
                   style={styles.daysInput}
-                  value={progressBarConfig.red.toString()}
-                  onChangeText={(text) => setProgressBarConfig(prev => ({ 
+                  value={progressBarConfig.blue.toString()}
+                  onChangeText={(text) => setProgressBarConfig((prev: ProgressBarConfig) => ({ 
                     ...prev, 
-                    red: parseInt(text) || 0 
+                    blue: parseInt(text) || 0 
+                  }))}
+                  placeholder="15"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="numeric"
+                />
+                <Text style={styles.daysLabel}>days</Text>
+              </View>
+
+              {/* Yellow Progress Bar */}
+              <View style={styles.colorConfigRow}>
+                <View style={[styles.colorIndicator, { backgroundColor: '#FDE047' }]} />
+                <Text style={styles.colorLabel}>Yellow (Warning - Next 5 days):</Text>
+                <TextInput
+                  style={styles.daysInput}
+                  value={progressBarConfig.yellow.toString()}
+                  onChangeText={(text) => setProgressBarConfig((prev: ProgressBarConfig) => ({ 
+                    ...prev, 
+                    yellow: parseInt(text) || 0 
                   }))}
                   placeholder="5"
                   placeholderTextColor="#9CA3AF"
@@ -159,55 +170,44 @@ export function AddStoreDialog({
               {/* Orange Progress Bar */}
               <View style={styles.colorConfigRow}>
                 <View style={[styles.colorIndicator, { backgroundColor: '#F59E0B' }]} />
-                <Text style={styles.colorLabel}>Orange (Urgent):</Text>
+                <Text style={styles.colorLabel}>Orange (Urgent - Next 5 days):</Text>
                 <TextInput
                   style={styles.daysInput}
                   value={progressBarConfig.orange.toString()}
-                  onChangeText={(text) => setProgressBarConfig(prev => ({ 
+                  onChangeText={(text) => setProgressBarConfig((prev: ProgressBarConfig) => ({ 
                     ...prev, 
                     orange: parseInt(text) || 0 
                   }))}
-                  placeholder="10"
+                  placeholder="5"
                   placeholderTextColor="#9CA3AF"
                   keyboardType="numeric"
                 />
                 <Text style={styles.daysLabel}>days</Text>
               </View>
 
-              {/* Yellow Progress Bar */}
+              {/* Red Progress Bar */}
               <View style={styles.colorConfigRow}>
-                <View style={[styles.colorIndicator, { backgroundColor: '#FDE047' }]} />
-                <Text style={styles.colorLabel}>Yellow (Warning):</Text>
+                <View style={[styles.colorIndicator, { backgroundColor: '#EF4444' }]} />
+                <Text style={styles.colorLabel}>Red (Critical - Last 5 days):</Text>
                 <TextInput
                   style={styles.daysInput}
-                  value={progressBarConfig.yellow.toString()}
-                  onChangeText={(text) => setProgressBarConfig(prev => ({ 
+                  value={progressBarConfig.red.toString()}
+                  onChangeText={(text) => setProgressBarConfig((prev: ProgressBarConfig) => ({ 
                     ...prev, 
-                    yellow: parseInt(text) || 0 
+                    red: parseInt(text) || 0 
                   }))}
-                  placeholder="15"
+                  placeholder="5"
                   placeholderTextColor="#9CA3AF"
                   keyboardType="numeric"
                 />
                 <Text style={styles.daysLabel}>days</Text>
               </View>
 
-              {/* Green Progress Bar */}
-              <View style={styles.colorConfigRow}>
+              {/* Green Status Info */}
+              <View style={styles.infoRow}>
                 <View style={[styles.colorIndicator, { backgroundColor: '#10B981' }]} />
-                <Text style={styles.colorLabel}>Green (Good):</Text>
-                <TextInput
-                  style={styles.daysInput}
-                  value={progressBarConfig.green.toString()}
-                  onChangeText={(text) => setProgressBarConfig(prev => ({ 
-                    ...prev, 
-                    green: parseInt(text) || 0 
-                  }))}
-                  placeholder="20"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="numeric"
-                />
-                <Text style={styles.daysLabel}>days</Text>
+                <Text style={styles.colorLabel}>Green (Paid):</Text>
+                <Text style={styles.infoText}>Automatically shown when payment is complete</Text>
               </View>
             </View>
 
@@ -232,8 +232,9 @@ export function AddStoreDialog({
               <Text style={styles.infoCardTitle}>Store Configuration</Text>
               <Text style={styles.infoCardText}>
                 • Store code must be unique and will be used for identification{'\n'}
-                • Progress bar colors help you track payment urgency{'\n'}
-                • Red = Close to Deadline/Overdue, Orange = Urgent, Yellow = Warning, Green = Good{'\n'}
+                • Progress bar colors help you track payment urgency (30-day cycle){'\n'}
+                • Blue = Good (15 days), Yellow = Warning (5 days), Orange = Urgent (5 days), Red = Critical (5 days){'\n'}
+                • Green = Automatically shown when payment is fully paid{'\n'}
                 • Configure days based on each store's payment behavior
               </Text>
             </View>

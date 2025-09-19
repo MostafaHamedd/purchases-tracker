@@ -1,8 +1,7 @@
-import { Payment, Purchase, PurchaseFilters, CreatePurchaseRequest, CreatePaymentRequest, PaymentTotals, RemainingAmounts, PaymentValidation, PurchaseStats, MonthlyTrends } from '../types';
-import { getMockPurchases, setMockPurchases, generatePurchaseId, generatePaymentId } from '../business';
-import { RecalculationService } from './recalculationService';
-import { calculatePurchaseFees, calculateDueDate } from '../business';
+import { calculateDueDate, calculatePurchaseFees, generatePaymentId, generatePurchaseId, getMockPurchases, setMockPurchases } from '../business';
+import { CreatePurchaseRequest, MonthlyTrends, Payment, PaymentTotals, PaymentValidation, Purchase, PurchaseFilters, PurchaseStats, RemainingAmounts } from '../types';
 import { calculateStatus, getDaysLeft } from '../utils';
+import { RecalculationService } from './recalculationService';
 import { emitPaymentAdded, emitPaymentDeleted } from './refreshEvents';
 
 // Purchase Service
@@ -98,7 +97,7 @@ export class PurchaseService {
     let purchases = getMockPurchases();
     
     if (filters.store && filters.store !== 'All') {
-      purchases = purchases.filter(p => p.store === filters.store);
+      purchases = purchases.filter(p => p.storeId === filters.store);
     }
     
     if (filters.status) {
@@ -108,7 +107,7 @@ export class PurchaseService {
     if (filters.searchQuery) {
       const query = filters.searchQuery.toLowerCase();
       purchases = purchases.filter(p => 
-        p.store.toLowerCase().includes(query) ||
+        p.storeId.toLowerCase().includes(query) ||
         p.status.toLowerCase().includes(query) ||
         p.id.includes(query)
       );

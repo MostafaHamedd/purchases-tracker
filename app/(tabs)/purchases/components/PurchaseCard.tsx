@@ -2,9 +2,14 @@ import { PurchaseCardProps } from '@/data';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useStores } from '../../stores/hooks/useStores';
 
 export function PurchaseCard({ purchase, onRefresh }: PurchaseCardProps) {
   const router = useRouter();
+  const { stores } = useStores();
+  
+  // Find the store associated with this purchase
+  const store = stores.find(s => s.id === purchase.storeId);
 
   const handlePress = () => {
     router.push(`/purchases/${purchase.id}`);
@@ -47,10 +52,10 @@ export function PurchaseCard({ purchase, onRefresh }: PurchaseCardProps) {
   const remainingGrams = purchase.totalGrams - purchase.payments.gramsPaid;
   const remainingFees = purchase.totalFees - purchase.payments.feesPaid;
 
-  // Format date to show month abbreviation and day
+  // Format date to show month name and day
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    const month = date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+    const month = date.toLocaleDateString('en-US', { month: 'long' });
     const day = date.getDate();
     const year = date.getFullYear();
     return `${month} ${day}, ${year}`;
@@ -79,7 +84,7 @@ export function PurchaseCard({ purchase, onRefresh }: PurchaseCardProps) {
 
       <View style={styles.storeSection}>
         <Text style={styles.storeIcon}>📍</Text>
-        <Text style={styles.storeName}>{purchase.store}</Text>
+        <Text style={styles.storeName}>{store?.code || 'Unknown Store'}</Text>
       </View>
 
       <View style={styles.progressBarContainer}>

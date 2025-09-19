@@ -1,22 +1,22 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  StyleSheet, 
-  TouchableOpacity,
-  TextInput,
-  Alert
+import { styles } from '@/app/(tabs)/purchases/styles';
+import { ThemedText } from '@/components/themed-text';
+import { PurchaseFilters, PurchaseService, refreshEvents } from '@/data';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+    Alert,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ThemedText } from '@/components/themed-text';
-import { PurchaseService, PurchaseFilters } from '@/data';
-import { refreshEvents } from '@/data';
-import { PurchaseCard } from './components/PurchaseCard';
+import { useStores } from '../stores/hooks/useStores';
 import { AddPurchaseDialog } from './components/AddPurchaseDialog';
-import { styles } from '@/app/(tabs)/purchases/styles';
+import { PurchaseCard } from './components/PurchaseCard';
 
 export default function PurchasesScreen() {
+  const { stores } = useStores();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStore, setSelectedStore] = useState<string>('All');
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -122,22 +122,17 @@ export default function PurchasesScreen() {
                 All
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.filterButton, selectedStore === 'Store A' && styles.activeFilter]}
-              onPress={() => setSelectedStore('Store A')}
-            >
-              <Text style={[styles.filterText, selectedStore === 'Store A' && styles.activeFilterText]}>
-                Store A
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.filterButton, selectedStore === 'Store B' && styles.activeFilter]}
-              onPress={() => setSelectedStore('Store B')}
-            >
-              <Text style={[styles.filterText, selectedStore === 'Store B' && styles.activeFilterText]}>
-                Store B
-              </Text>
-            </TouchableOpacity>
+            {stores.map((store) => (
+              <TouchableOpacity
+                key={store.id}
+                style={[styles.filterButton, selectedStore === store.id && styles.activeFilter]}
+                onPress={() => setSelectedStore(store.id)}
+              >
+                <Text style={[styles.filterText, selectedStore === store.id && styles.activeFilterText]}>
+                  {store.code}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </ScrollView>
       </View>

@@ -112,21 +112,19 @@ export const getProgressBarColor = (purchase: Purchase): string => {
   
   // If overdue (after day 30 with any outstanding)
   if (daysLeft < 0) {
-    return '#B91C1C'; // Red-700 - Close to Deadline/Overdue
+    return '#B91C1C'; // Red-700 - Overdue
   }
   
   // Color progression based on days remaining (30-day payment terms)
-  // Ordered from most urgent (closest to deadline) to least urgent
-  if (daysLeft <= 4) {
-    return '#DC2626'; // Red-600 - Day 26-30 (Pending - final) - Most urgent
-  } else if (daysLeft <= 6) {
-    return '#DC2626'; // Red-600 - Day 21-25 (Pending - high) - Very urgent (5-6 days)
-  } else if (daysLeft <= 9) {
-    return '#EA580C'; // Orange-600 - Day 21-25 (Pending - high) - High urgency (7-9 days)
-  } else if (daysLeft <= 19) {
-    return '#F59E0B'; // Amber-500 - Day 11-20 (Pending - mid) - Mid urgency (10-19 days)
+  // New structure: Blue (15 days) -> Yellow (5 days) -> Orange (5 days) -> Red (5 days)
+  if (daysLeft <= 5) {
+    return '#EF4444'; // Red - Last 5 days (Critical)
+  } else if (daysLeft <= 10) {
+    return '#F59E0B'; // Orange - Next 5 days (Urgent)
+  } else if (daysLeft <= 15) {
+    return '#FDE047'; // Yellow - Next 5 days (Warning)
   } else {
-    return '#2563EB'; // Blue-600 - Day 1-10 (Pending - early) - Least urgent (20+ days)
+    return '#3B82F6'; // Blue - First 15 days (Good)
   }
 };
 

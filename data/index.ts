@@ -62,3 +62,6 @@ export { RecalculationService, recalculateCurrentMonth, recalculateAfterPaymentC
 
 // Re-export refresh events
 export { refreshEvents, emitPurchaseUpdated, emitPaymentAdded, emitPaymentDeleted, emitSupplierUpdated, emitStoreUpdated } from './services/refreshEvents';
+
+// Mock Data
+export * from './mockData';
