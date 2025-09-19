@@ -51,38 +51,68 @@ export const mockStores: Store[] = [
 export const mockSuppliers: Supplier[] = [
   {
     id: '1',
-    name: 'Egyptian Gold 18K',
-    code: 'EG18',
-    karatType: '18',
-    discountTiers: [
-      { id: 'tier1', name: 'Standard', threshold: 0, discountPercentage: 20, isProtected: true },
-      { id: 'tier2', name: 'Premium', threshold: 500, discountPercentage: 26, isProtected: true },
-      { id: 'tier3', name: 'VIP', threshold: 1000, discountPercentage: 34, isProtected: true },
-    ],
+    name: 'Egyptian Gold Supplier',
+    code: 'EGS',
+    karat18: {
+      discountTiers: [
+        { id: 'tier1', name: 'Standard', threshold: 0, discountPercentage: 20, isProtected: true },
+        { id: 'tier2', name: 'Premium', threshold: 500, discountPercentage: 26, isProtected: true },
+        { id: 'tier3', name: 'VIP', threshold: 1000, discountPercentage: 34, isProtected: true },
+      ],
+      isActive: true,
+    },
+    karat21: {
+      discountTiers: [
+        { id: 'tier1', name: 'Basic', threshold: 0, discountPercentage: 15, isProtected: true },
+        { id: 'tier2', name: 'Advanced', threshold: 750, discountPercentage: 20, isProtected: true },
+        { id: 'tier3', name: 'Elite', threshold: 1500, discountPercentage: 23, isProtected: true },
+      ],
+      isActive: true,
+    },
     isActive: true,
   },
   {
     id: '2',
-    name: 'Egyptian Gold 21K',
-    code: 'EG21',
-    karatType: '21',
-    discountTiers: [
-      { id: 'tier1', name: 'Basic', threshold: 0, discountPercentage: 15, isProtected: true },
-      { id: 'tier2', name: 'Advanced', threshold: 750, discountPercentage: 20, isProtected: true },
-      { id: 'tier3', name: 'Elite', threshold: 1500, discountPercentage: 23, isProtected: true },
-    ],
+    name: 'Premium Gold Supplier',
+    code: 'PGS',
+    karat18: {
+      discountTiers: [
+        { id: 'tier1', name: 'Regular', threshold: 0, discountPercentage: 18, isProtected: true },
+        { id: 'tier2', name: 'Plus', threshold: 400, discountPercentage: 24, isProtected: true },
+        { id: 'tier3', name: 'Max', threshold: 800, discountPercentage: 30, isProtected: true },
+      ],
+      isActive: true,
+    },
+    karat21: {
+      discountTiers: [
+        { id: 'tier1', name: 'Standard', threshold: 0, discountPercentage: 12, isProtected: true },
+        { id: 'tier2', name: 'Premium', threshold: 600, discountPercentage: 18, isProtected: true },
+        { id: 'tier3', name: 'VIP', threshold: 1200, discountPercentage: 25, isProtected: true },
+      ],
+      isActive: true,
+    },
     isActive: true,
   },
   {
     id: '3',
-    name: 'Egyptian Silver 18K',
-    code: 'ES18',
-    karatType: '18',
-    discountTiers: [
-      { id: 'tier1', name: 'Regular', threshold: 0, discountPercentage: 5, isProtected: true },
-      { id: 'tier2', name: 'Plus', threshold: 300, discountPercentage: 8, isProtected: true },
-      { id: 'tier3', name: 'Max', threshold: 600, discountPercentage: 10, isProtected: true },
-    ],
+    name: 'Silver Gold Supplier',
+    code: 'SGS',
+    karat18: {
+      discountTiers: [
+        { id: 'tier1', name: 'Basic', threshold: 0, discountPercentage: 5, isProtected: true },
+        { id: 'tier2', name: 'Plus', threshold: 300, discountPercentage: 8, isProtected: true },
+        { id: 'tier3', name: 'Max', threshold: 600, discountPercentage: 10, isProtected: true },
+      ],
+      isActive: true,
+    },
+    karat21: {
+      discountTiers: [
+        { id: 'tier1', name: 'Regular', threshold: 0, discountPercentage: 3, isProtected: true },
+        { id: 'tier2', name: 'Advanced', threshold: 500, discountPercentage: 6, isProtected: true },
+        { id: 'tier3', name: 'Elite', threshold: 1000, discountPercentage: 8, isProtected: true },
+      ],
+      isActive: true,
+    },
     isActive: true,
   },
 ];
@@ -95,14 +125,26 @@ export const mockPurchases: Purchase[] = [
     date: getCurrentMonthDate(5), // 5th of current month
     storeId: '1', // Main Store - Downtown
     status: 'Pending',
-    totalGrams: 300,
-    totalFees: -5200, // With discount: 1500 - 6700 = -5200 (ES18: 1000, EG18: 3400, EG21: 2300)
+    totalGrams: 300, // All converted to 21k equivalent
+    totalFees: -5200, // With discount: 1500 - 6700 = -5200
     totalDiscount: 6700,
     dueDate: getDateString(25),
     suppliers: {
-      ES18: 100,
-      EG18: 100,
-      EG21: 100,
+      EGS: {
+        grams18k: 100,
+        grams21k: 100,
+        totalGrams21k: 100 + (100 * 18/21), // Convert 18k to 21k equivalent
+      },
+      PGS: {
+        grams18k: 50,
+        grams21k: 50,
+        totalGrams21k: 50 + (50 * 18/21), // Convert 18k to 21k equivalent
+      },
+      SGS: {
+        grams18k: 0,
+        grams21k: 100,
+        totalGrams21k: 100,
+      },
     },
     payments: {
       gramsPaid: 0,
@@ -115,14 +157,26 @@ export const mockPurchases: Purchase[] = [
     date: getCurrentMonthDate(8), // 8th of current month
     storeId: '2', // Branch Store - Heliopolis
     status: 'Partial',
-    totalGrams: 400,
-    totalFees: -6900, // With discount: 2000 - 8900 = -6900 (ES18: 1500, EG18: 5100, EG21: 2300)
+    totalGrams: 400, // All converted to 21k equivalent
+    totalFees: -6900, // With discount: 2000 - 8900 = -6900
     totalDiscount: 8900,
     dueDate: getDateString(22),
     suppliers: {
-      ES18: 150,
-      EG18: 150,
-      EG21: 100,
+      EGS: {
+        grams18k: 150,
+        grams21k: 100,
+        totalGrams21k: 100 + (150 * 18/21), // Convert 18k to 21k equivalent
+      },
+      PGS: {
+        grams18k: 0,
+        grams21k: 150,
+        totalGrams21k: 150,
+      },
+      SGS: {
+        grams18k: 0,
+        grams21k: 0,
+        totalGrams21k: 0,
+      },
     },
     payments: {
       gramsPaid: 0,
@@ -135,14 +189,26 @@ export const mockPurchases: Purchase[] = [
     date: getCurrentMonthDate(12), // 12th of current month
     storeId: '1', // Main Store - Downtown
     status: 'Paid',
-    totalGrams: 500,
-    totalFees: -8600, // With discount: 2500 - 11100 = -8600 (ES18: 2000, EG18: 6800, EG21: 2300)
+    totalGrams: 500, // All converted to 21k equivalent
+    totalFees: -8600, // With discount: 2500 - 11100 = -8600
     totalDiscount: 11100,
     dueDate: getDateString(18),
     suppliers: {
-      ES18: 200,
-      EG18: 200,
-      EG21: 100,
+      EGS: {
+        grams18k: 200,
+        grams21k: 100,
+        totalGrams21k: 100 + (200 * 18/21), // Convert 18k to 21k equivalent
+      },
+      PGS: {
+        grams18k: 0,
+        grams21k: 200,
+        totalGrams21k: 200,
+      },
+      SGS: {
+        grams18k: 0,
+        grams21k: 0,
+        totalGrams21k: 0,
+      },
     },
     payments: {
       gramsPaid: 0,
@@ -156,14 +222,26 @@ export const mockPurchases: Purchase[] = [
     date: getPreviousMonthDate(15), // 15th of previous month
     storeId: '2', // Branch Store - Heliopolis
     status: 'Overdue',
-    totalGrams: 300,
+    totalGrams: 300, // All converted to 21k equivalent
     totalFees: 1500, // No discount: 300*5 = 1500
     totalDiscount: 0,
     dueDate: getDateString(15),
     suppliers: {
-      ES18: 100,
-      EG18: 100,
-      EG21: 100,
+      EGS: {
+        grams18k: 100,
+        grams21k: 100,
+        totalGrams21k: 100 + (100 * 18/21), // Convert 18k to 21k equivalent
+      },
+      PGS: {
+        grams18k: 0,
+        grams21k: 0,
+        totalGrams21k: 0,
+      },
+      SGS: {
+        grams18k: 0,
+        grams21k: 100,
+        totalGrams21k: 100,
+      },
     },
     payments: {
       gramsPaid: 0,
@@ -176,14 +254,26 @@ export const mockPurchases: Purchase[] = [
     date: getPreviousMonthDate(20), // 20th of previous month
     storeId: '1', // Main Store - Downtown
     status: 'Pending',
-    totalGrams: 200,
+    totalGrams: 200, // All converted to 21k equivalent
     totalFees: 1000, // No discount: 200*5 = 1000
     totalDiscount: 0,
     dueDate: getDateString(10),
     suppliers: {
-      ES18: 100,
-      EG18: 50,
-      EG21: 50,
+      EGS: {
+        grams18k: 50,
+        grams21k: 50,
+        totalGrams21k: 50 + (50 * 18/21), // Convert 18k to 21k equivalent
+      },
+      PGS: {
+        grams18k: 0,
+        grams21k: 0,
+        totalGrams21k: 0,
+      },
+      SGS: {
+        grams18k: 0,
+        grams21k: 100,
+        totalGrams21k: 100,
+      },
     },
     payments: {
       gramsPaid: 0,
@@ -196,14 +286,26 @@ export const mockPurchases: Purchase[] = [
     date: getPreviousMonthDate(25), // 25th of previous month
     storeId: '2', // Branch Store - Heliopolis
     status: 'Partial',
-    totalGrams: 250,
+    totalGrams: 250, // All converted to 21k equivalent
     totalFees: 1250, // No discount: 250*5 = 1250
     totalDiscount: 0,
     dueDate: getDateString(5),
     suppliers: {
-      ES18: 100,
-      EG18: 100,
-      EG21: 50,
+      EGS: {
+        grams18k: 100,
+        grams21k: 50,
+        totalGrams21k: 50 + (100 * 18/21), // Convert 18k to 21k equivalent
+      },
+      PGS: {
+        grams18k: 0,
+        grams21k: 0,
+        totalGrams21k: 0,
+      },
+      SGS: {
+        grams18k: 0,
+        grams21k: 100,
+        totalGrams21k: 100,
+      },
     },
     payments: {
       gramsPaid: 0,
@@ -230,4 +332,4 @@ export const defaultProgressBarConfig: ProgressBarConfig = {
 };
 
 // Available karat types
-export const availableKaratTypes: KaratType[] = ['18', '21', '22', '24'];
+export const availableKaratTypes: KaratType[] = ['18', '21'];

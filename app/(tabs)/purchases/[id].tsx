@@ -129,6 +129,20 @@ export default function PurchaseDetailScreen() {
     }
   };
 
+  // Calculate total grams from suppliers (21k equivalent)
+  const calculateTotalGramsFromSuppliers = () => {
+    if (!purchase?.suppliers) return 0;
+    let total = 0;
+    Object.values(purchase.suppliers).forEach(supplier => {
+      if (supplier && typeof supplier === 'object') {
+        total += supplier.totalGrams21k || 0;
+      }
+    });
+    return Math.round(total * 10) / 10; // Round to 1 decimal place
+  };
+
+  const calculatedTotalGrams = calculateTotalGramsFromSuppliers();
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -158,8 +172,8 @@ export default function PurchaseDetailScreen() {
 
           <View style={styles.infoContent}>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Total Grams:</Text>
-              <Text style={styles.infoValue}>{purchase.totalGrams || 0}g</Text>
+              <Text style={styles.infoLabel}>Total Grams (21k equivalent):</Text>
+              <Text style={styles.infoValue}>{calculatedTotalGrams}g</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Base Fees:</Text>
@@ -232,7 +246,7 @@ export default function PurchaseDetailScreen() {
         }}
         purchaseId={purchase.id}
         purchase={{
-          totalGrams: purchase.totalGrams || 0,
+          totalGrams: calculatedTotalGrams,
           netFees: (purchase.totalFees || 0) - (purchase.totalDiscount || 0),
           totalFees: purchase.totalFees || 0,
           totalDiscount: purchase.totalDiscount || 0

@@ -1,25 +1,63 @@
+import { mockSuppliers } from '@/data/mockData';
 import { SupplierReceiptCardProps } from '@/data/types';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 export function SupplierReceiptCard({ suppliers }: SupplierReceiptCardProps) {
+  // Function to get the correct discount rate based on supplier and grams
+  const getDiscountRate = (supplierCode: string, grams: number) => {
+    const supplier = mockSuppliers.find(s => s.code === supplierCode);
+    if (!supplier) return 0;
+    
+    // Use 21k discount tiers since we're working with 21k equivalent
+    const tiers = supplier.karat21.discountTiers;
+    
+    // Find the appropriate tier based on grams
+    let applicableTier = tiers[0]; // Default to first tier
+    for (const tier of tiers) {
+      if (grams >= tier.threshold) {
+        applicableTier = tier;
+      } else {
+        break;
+      }
+    }
+    
+    return applicableTier.discountPercentage;
+  };
+
+  // Filter suppliers that have receipts (grams > 0)
+  const suppliersWithReceipts = Object.entries(suppliers).filter(([supplierCode, supplierData]) => {
+    return supplierData && supplierData.totalGrams21k > 0;
+  });
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Supplier Receipts</Text>
       <View style={styles.content}>
-        {Object.entries(suppliers).map(([supplier, grams]) => {
+        {suppliersWithReceipts.length > 0 ? (
+          suppliersWithReceipts.map(([supplierCode, supplierData]) => {
+          // Use totalGrams21k for calculations (already converted to 21k equivalent)
+          const grams = Math.round(supplierData.totalGrams21k * 10) / 10; // Round to 1 decimal place
           const baseFee = grams * 5; // 5 EGP per gram base fee
-          const discountRate = supplier === 'ES18' ? 10 : supplier === 'EG18' ? 34 : 23;
+          const discountRate = getDiscountRate(supplierCode, grams); // Get discount rate from supplier configuration
           const discount = grams * discountRate;
           const netFee = baseFee - discount;
           
           return (
-            <View key={supplier} style={styles.supplierCard}>
-              <Text style={styles.supplierName}>{supplier}</Text>
+            <View key={supplierCode} style={styles.supplierCard}>
+              <Text style={styles.supplierName}>{supplierCode}</Text>
               
               <View style={styles.detailRow}>
-                <Text style={styles.label}>Grams:</Text>
-                <Text style={styles.value}>{grams}g</Text>
+                <Text style={styles.label}>18k Grams:</Text>
+                <Text style={styles.value}>{supplierData.grams18k}g</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.label}>21k Grams:</Text>
+                <Text style={styles.value}>{supplierData.grams21k}g</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.label}>Total (21k equivalent):</Text>
+                <Text style={[styles.value, styles.totalValue]}>{grams}g</Text>
               </View>
               
               <View style={styles.detailRow}>
@@ -40,7 +78,12 @@ export function SupplierReceiptCard({ suppliers }: SupplierReceiptCardProps) {
               </View>
             </View>
           );
-        })}
+        })
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>No supplier receipts found</Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -98,6 +141,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#1F2937',
   },
+  totalValue: {
+    fontWeight: '600',
+    color: '#1E40AF',
+  },
   greenText: {
     color: '#10B981',
     fontWeight: '600',
@@ -106,5 +153,14 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#E5E7EB',
     marginVertical: 8,
+  },
+  emptyState: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontStyle: 'italic',
   },
 });

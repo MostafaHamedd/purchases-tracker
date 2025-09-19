@@ -11,8 +11,17 @@ export function SupplierCard({ supplier, onDelete, onEdit }: SupplierCardProps) 
             <Text style={styles.supplierName}>{supplier.name}</Text>
             <View style={styles.supplierCodeRow}>
               <Text style={styles.supplierCode}>{supplier.code}</Text>
-              <View style={[styles.karatBadge, { backgroundColor: supplier.karatType === '18' ? '#F59E0B' : '#10B981' }]}>
-                <Text style={styles.karatText}>{supplier.karatType}K</Text>
+              <View style={styles.karatBadges}>
+                {supplier.karat18.isActive && (
+                  <View style={[styles.karatBadge, { backgroundColor: '#F59E0B' }]}>
+                    <Text style={styles.karatText}>18K</Text>
+                  </View>
+                )}
+                {supplier.karat21.isActive && (
+                  <View style={[styles.karatBadge, { backgroundColor: '#10B981' }]}>
+                    <Text style={styles.karatText}>21K</Text>
+                  </View>
+                )}
               </View>
             </View>
           </View>
@@ -44,15 +53,41 @@ export function SupplierCard({ supplier, onDelete, onEdit }: SupplierCardProps) 
         <View style={styles.discountTiers}>
           <Text style={styles.discountTiersTitle}>Discount Tiers</Text>
           <View style={styles.tiersContainer}>
-            {supplier.discountTiers
-              .sort((a, b) => a.threshold - b.threshold)
-              .map((tier, index) => (
-                <View key={tier.id} style={styles.tier}>
-                  <Text style={styles.tierLabel}>{tier.name}</Text>
-                  <Text style={styles.tierThreshold}>≥{tier.threshold}g</Text>
-                  <Text style={styles.tierValue}>{tier.discountPercentage}%</Text>
+            {/* 18k Tiers */}
+            {supplier.karat18.isActive && (
+              <View style={styles.karatSection}>
+                <Text style={styles.karatTitle}>18k Gold</Text>
+                <View style={styles.tiersRow}>
+                  {supplier.karat18.discountTiers
+                    .sort((a, b) => a.threshold - b.threshold)
+                    .map((tier) => (
+                      <View key={`18k-${tier.id}`} style={styles.tier}>
+                        <Text style={styles.tierLabel}>{tier.name}</Text>
+                        <Text style={styles.tierThreshold}>≥{tier.threshold}g</Text>
+                        <Text style={styles.tierValue}>{tier.discountPercentage}%</Text>
+                      </View>
+                    ))}
                 </View>
-              ))}
+              </View>
+            )}
+            
+            {/* 21k Tiers */}
+            {supplier.karat21.isActive && (
+              <View style={styles.karatSection}>
+                <Text style={styles.karatTitle}>21k Gold</Text>
+                <View style={styles.tiersRow}>
+                  {supplier.karat21.discountTiers
+                    .sort((a, b) => a.threshold - b.threshold)
+                    .map((tier) => (
+                      <View key={`21k-${tier.id}`} style={styles.tier}>
+                        <Text style={styles.tierLabel}>{tier.name}</Text>
+                        <Text style={styles.tierThreshold}>≥{tier.threshold}g</Text>
+                        <Text style={styles.tierValue}>{tier.discountPercentage}%</Text>
+                      </View>
+                    ))}
+                </View>
+              </View>
+            )}
           </View>
         </View>
       </View>
@@ -100,6 +135,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     fontWeight: '500',
+  },
+  karatBadges: {
+    flexDirection: 'row',
+    gap: 4,
   },
   karatBadge: {
     paddingHorizontal: 8,
@@ -164,6 +203,19 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   tiersContainer: {
+    gap: 16,
+  },
+  karatSection: {
+    marginBottom: 12,
+  },
+  karatTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  tiersRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,

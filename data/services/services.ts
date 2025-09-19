@@ -25,18 +25,24 @@ export class PurchaseService {
     const newId = generatePurchaseId();
     
     const fees = calculatePurchaseFees(purchaseData.suppliers, purchaseData.date);
-    const totalGrams = Object.values(purchaseData.suppliers).reduce((sum, grams) => sum + grams, 0);
+    // Calculate total grams from the new karat structure (sum of totalGrams21k for all suppliers)
+    const totalGrams = Math.round(Object.values(purchaseData.suppliers).reduce((sum, supplierData) => {
+      if (supplierData && typeof supplierData === 'object') {
+        return sum + (supplierData.totalGrams21k || 0);
+      }
+      return sum;
+    }, 0) * 10) / 10; // Round to 1 decimal place
     
     const newPurchase: Purchase = {
       id: newId,
       date: purchaseData.date,
-      store: purchaseData.store,
+      storeId: purchaseData.storeId,
       status: 'Pending',
       totalGrams,
       totalFees: fees.totalFees,
       totalDiscount: fees.totalDiscount,
       dueDate: calculateDueDate(purchaseData.date),
-      suppliers: purchaseData.suppliers as { ES18: number; EG18: number; EG21: number },
+      suppliers: purchaseData.suppliers,
       payments: {
         gramsPaid: 0,
         feesPaid: 0,

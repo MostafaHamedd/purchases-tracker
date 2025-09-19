@@ -5,8 +5,9 @@
 export interface Payment {
   id: string;
   date: string;
-  gramsPaid: number;
+  gramsPaid: number; // In original karat (18k or 21k)
   feesPaid: number;
+  karatType: KaratType; // Track original karat for payment
   note?: string;
 }
 
@@ -15,11 +16,15 @@ export interface Purchase {
   date: string;
   storeId: string; // Reference to Store.id
   status: PurchaseStatus;
-  totalGrams: number;
+  totalGrams: number; // Always in 21k equivalent
   totalFees: number;
   totalDiscount: number;
   dueDate: string;
-  suppliers: Record<string, number>; // Dynamic supplier codes with gram amounts
+  suppliers: Record<string, {
+    grams18k: number;
+    grams21k: number;
+    totalGrams21k: number; // Converted total for calculations
+  }>;
   payments: {
     gramsPaid: number;
     feesPaid: number;
@@ -27,7 +32,7 @@ export interface Purchase {
   paymentHistory: Payment[];
 }
 
-export type KaratType = '18' | '21' | '22' | '24';
+export type KaratType = '18' | '21';
 export type PurchaseStatus = 'Paid' | 'Pending' | 'Partial' | 'Overdue';
 
 export interface DiscountTier {
@@ -42,8 +47,14 @@ export interface Supplier {
   id: string;
   name: string;
   code: string;
-  karatType: KaratType;
-  discountTiers: DiscountTier[];
+  karat18: {
+    discountTiers: DiscountTier[];
+    isActive: boolean;
+  };
+  karat21: {
+    discountTiers: DiscountTier[];
+    isActive: boolean;
+  };
   isActive: boolean;
 }
 

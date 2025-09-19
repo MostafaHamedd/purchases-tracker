@@ -1,6 +1,8 @@
-import { refreshEvents, mockSuppliers as initialMockSuppliers } from '@/data';
+import { mockSuppliers as initialMockSuppliers, refreshEvents } from '@/data';
 import { Supplier } from '@/data/types';
 import { useEffect, useState } from 'react';
+
+export type { Supplier };
 
 export function useSuppliers() {
   const [suppliers, setSuppliers] = useState<Supplier[]>(initialMockSuppliers);

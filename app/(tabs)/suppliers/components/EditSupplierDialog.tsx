@@ -213,7 +213,7 @@ export function EditSupplierDialog({
 
             {/* Discount Tiers */}
             <View style={styles.inputGroup}>
-              <View style={styles.tiersHeader}>
+              <View style={styles.tierHeader}>
                 <Text style={styles.inputLabel}>Discount Tiers</Text>
                 <TouchableOpacity 
                   style={styles.addTierButton}

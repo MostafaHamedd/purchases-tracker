@@ -1,3 +1,4 @@
+import { mockSuppliers } from '@/data/mockData';
 import { AddPurchaseDialogProps, PurchaseFormData, Store } from '@/data/types';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useState } from 'react';
@@ -12,7 +13,6 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
   const [formData, setFormData] = useState<Partial<PurchaseFormData>>({
     storeId: '',
     date: new Date().toISOString().split('T')[0],
-    totalGrams: 0,
     suppliers: {},
     totalFees: 0,
     totalDiscount: 0,
@@ -33,10 +33,27 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
       ...prev,
       suppliers: {
         ...prev.suppliers,
-        [supplier]: grams
+        [supplier]: {
+          grams18k: 0,
+          grams21k: grams,
+          totalGrams21k: grams
+        }
       }
     }));
   };
+
+  // Calculate total grams from all supplier entries
+  const calculateTotalGrams = () => {
+    let total = 0;
+    Object.values(formData.suppliers || {}).forEach(supplier => {
+      if (supplier && typeof supplier === 'object') {
+        total += supplier.totalGrams21k || 0;
+      }
+    });
+    return Math.round(total * 10) / 10; // Round to 1 decimal place
+  };
+
+  const totalGrams = calculateTotalGrams();
 
   const handleClose = () => {
     setSelectedStore('');
@@ -44,7 +61,6 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
     setFormData({
       storeId: '',
       date: new Date().toISOString().split('T')[0],
-      totalGrams: 0,
       suppliers: {},
       totalFees: 0,
       totalDiscount: 0,
@@ -60,8 +76,8 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
       return;
     }
 
-    if (!formData.totalGrams || formData.totalGrams <= 0) {
-      Alert.alert('Error', 'Please enter total grams for this purchase');
+    if (totalGrams <= 0) {
+      Alert.alert('Error', 'Please enter grams for at least one supplier');
       return;
     }
 
@@ -71,15 +87,15 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
     }
 
     // Calculate total fees and discount (simplified calculation)
-    const totalFees = (formData.totalGrams || 0) * 5; // Base fee per gram
-    const totalDiscount = (formData.totalGrams || 0) >= 1000 ? totalFees * 0.1 : 0; // 10% discount for 1000g+
+    const totalFees = totalGrams * 5; // Base fee per gram
+    const totalDiscount = totalGrams >= 1000 ? totalFees * 0.1 : 0; // 10% discount for 1000g+
     const netFees = totalFees - totalDiscount;
 
     const purchaseData: PurchaseFormData = {
       id: Date.now().toString(),
       storeId: selectedStore,
       date: formData.date || new Date().toISOString().split('T')[0],
-      totalGrams: formData.totalGrams || 0,
+      totalGrams,
       suppliers: formData.suppliers || {},
       totalFees,
       totalDiscount,
@@ -157,56 +173,82 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
               </View>
             )}
 
-            <Text style={styles.sectionTitle}>Total Grams</Text>
-            <TextInput
-              style={[styles.totalGramsInput, { fontSize: 14 }]}
-              value={formData.totalGrams?.toString() || ''}
-              onChangeText={(text) => setFormData(prev => ({ 
-                ...prev, 
-                totalGrams: parseFloat(text) || 0 
-              }))}
-              placeholder="Enter the total weight of gold in grams (e.g., 500)"
-              placeholderTextColor="#6B7280"
-              keyboardType="numeric"
-            />
+            {/* Purchase Summary */}
+            {totalGrams > 0 && (
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryTitle}>Purchase Summary</Text>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Total Grams (21k equivalent):</Text>
+                  <Text style={styles.summaryValue}>{totalGrams}g</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Base Fees:</Text>
+                  <Text style={styles.summaryValue}>EGP {(totalGrams * 5).toLocaleString()}</Text>
+                </View>
+                {totalGrams >= 1000 && (
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Discount (10%):</Text>
+                    <Text style={[styles.summaryValue, styles.discountValue]}>-EGP {(totalGrams * 5 * 0.1).toLocaleString()}</Text>
+                  </View>
+                )}
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Net Fees:</Text>
+                  <Text style={[styles.summaryValue, styles.netFeesValue]}>
+                    EGP {((totalGrams * 5) - (totalGrams >= 1000 ? totalGrams * 5 * 0.1 : 0)).toLocaleString()}
+                  </Text>
+                </View>
+              </View>
+            )}
 
             {selectedSuppliers.length > 0 && (
               <Text style={styles.sectionTitle}>Enter Grams for Each Supplier</Text>
             )}
 
             <View style={styles.supplierButtons}>
-              {['ES18', 'EG18', 'EG21'].map((supplier) => (
+              {mockSuppliers.map((supplier) => (
                 <TouchableOpacity
-                  key={supplier}
+                  key={supplier.code}
                   style={[
                     styles.supplierButton,
-                    selectedSuppliers.includes(supplier) && styles.selectedSupplierButton
+                    selectedSuppliers.includes(supplier.code) && styles.selectedSupplierButton
                   ]}
-                  onPress={() => toggleSupplier(supplier)}
+                  onPress={() => toggleSupplier(supplier.code)}
                 >
                   <Text style={[
                     styles.supplierButtonText,
-                    selectedSuppliers.includes(supplier) && styles.selectedSupplierButtonText
+                    selectedSuppliers.includes(supplier.code) && styles.selectedSupplierButtonText
                   ]}>
-                    {supplier}
+                    {supplier.name}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            {selectedSuppliers.map((supplier) => (
-              <View key={supplier} style={styles.supplierInputGroup}>
-                <Text style={styles.supplierLabel}>{supplier} Grams:</Text>
-                <TextInput
-                  style={[styles.input, { fontSize: 12 }]}
-                  value={formData.suppliers?.[supplier]?.toString() || ''}
-                  onChangeText={(text) => updateSupplierGrams(supplier, parseFloat(text) || 0)}
-                  placeholder={`Enter grams for ${supplier}`}
-                  placeholderTextColor="#6B7280"
-                  keyboardType="numeric"
-                />
-              </View>
-            ))}
+            {selectedSuppliers.map((supplierCode) => {
+              const supplierData = formData.suppliers?.[supplierCode];
+              const grams21k = supplierData && typeof supplierData === 'object' ? supplierData.grams21k : 0;
+              const supplier = mockSuppliers.find(s => s.code === supplierCode);
+              const supplierName = supplier ? supplier.name : supplierCode;
+              
+              return (
+                <View key={supplierCode} style={styles.supplierInputGroup}>
+                  <Text style={styles.supplierLabel}>{supplierName} Grams (21k):</Text>
+                  <TextInput
+                    style={[styles.input, { fontSize: 12 }]}
+                    value={grams21k.toString()}
+                    onChangeText={(text) => updateSupplierGrams(supplierCode, parseFloat(text) || 0)}
+                    placeholder={`Enter grams for ${supplierName}`}
+                    placeholderTextColor="#6B7280"
+                    keyboardType="numeric"
+                  />
+                  {grams21k > 0 && (
+                    <Text style={styles.supplierHint}>
+                      {supplierName}: {grams21k}g (21k equivalent)
+                    </Text>
+                  )}
+                </View>
+              );
+            })}
           </ScrollView>
 
           <View style={styles.buttons}>
@@ -307,16 +349,42 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  totalGramsInput: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
+  summaryCard: {
+    backgroundColor: '#F0F9FF',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    color: '#1F2937',
-    backgroundColor: '#FFFFFF',
+    padding: 16,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  summaryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E40AF',
+    marginBottom: 12,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: '#374151',
+    flex: 1,
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  discountValue: {
+    color: '#10B981',
+  },
+  netFeesValue: {
+    color: '#1E40AF',
+    fontSize: 16,
   },
   supplierButtons: {
     flexDirection: 'row',
@@ -351,6 +419,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#374151',
     marginBottom: 8,
+  },
+  supplierHint: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   input: {
     borderWidth: 1,

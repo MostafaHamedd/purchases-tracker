@@ -18,8 +18,8 @@ export interface PaginatedResponse<T> {
 // Request types for API calls
 export interface CreatePurchaseRequest {
   date: string;
-  store: 'Store A' | 'Store B';
-  suppliers: { [key: string]: number };
+  storeId: string;
+  suppliers: { [key: string]: { grams18k: number; grams21k: number; totalGrams21k: number } };
 }
 
 export interface CreatePaymentRequest {

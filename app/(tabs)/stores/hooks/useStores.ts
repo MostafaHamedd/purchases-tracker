@@ -1,6 +1,8 @@
-import { refreshEvents, mockStores as initialMockStores } from '@/data';
+import { mockStores as initialMockStores, refreshEvents } from '@/data';
 import { Store } from '@/data/types';
 import { useState } from 'react';
+
+export type { Store };
 
 export function useStores() {
   const [stores, setStores] = useState<Store[]>(initialMockStores);

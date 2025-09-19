@@ -10,7 +10,6 @@ export function StoreCard({ store, onDelete, onEdit }: StoreCardProps) {
           <View style={styles.storeInfo}>
             <Text style={styles.storeName}>{store.name}</Text>
             <Text style={styles.storeCode}>{store.code}</Text>
-            <Text style={styles.storeAddress}>{store.address}</Text>
           </View>
           <View style={styles.storeCardActions}>
             <View style={[styles.statusBadge, { backgroundColor: store.isActive ? '#34D399' : '#EF4444' }]}>
@@ -40,24 +39,6 @@ export function StoreCard({ store, onDelete, onEdit }: StoreCardProps) {
         <View style={styles.storeDetails}>
           <Text style={styles.storeDetailsTitle}>Store Details</Text>
           <View style={styles.storeDetailsGrid}>
-            {store.phone && (
-              <View style={styles.storeDetailItem}>
-                <Text style={styles.storeDetailLabel}>Phone</Text>
-                <Text style={styles.storeDetailValue}>{store.phone}</Text>
-              </View>
-            )}
-            {store.email && (
-              <View style={styles.storeDetailItem}>
-                <Text style={styles.storeDetailLabel}>Email</Text>
-                <Text style={styles.storeDetailValue}>{store.email}</Text>
-              </View>
-            )}
-            {store.manager && (
-              <View style={styles.storeDetailItem}>
-                <Text style={styles.storeDetailLabel}>Manager</Text>
-                <Text style={styles.storeDetailValue}>{store.manager}</Text>
-              </View>
-            )}
             <View style={styles.storeDetailItem}>
               <Text style={styles.storeDetailLabel}>Created</Text>
               <Text style={styles.storeDetailValue}>

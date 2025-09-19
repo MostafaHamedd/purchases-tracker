@@ -13,7 +13,14 @@ export function EditPaymentDialog({ visible, onClose, onSubmit }: EditPaymentDia
             <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.submitButton} onPress={() => onSubmit({})}>
+            <TouchableOpacity style={styles.submitButton} onPress={() => onSubmit({
+              id: '',
+              feesPaid: 0,
+              gramsPaid: 0,
+              date: new Date().toISOString().split('T')[0],
+              karatType: '21' as const,
+              notes: ''
+            })}>
               <Text style={styles.submitText}>Save</Text>
             </TouchableOpacity>
           </View>

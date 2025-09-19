@@ -51,7 +51,7 @@ export interface PaymentCardProps {
 }
 
 export interface SupplierReceiptCardProps {
-  suppliers: { [key: string]: number };
+  suppliers: { [key: string]: { grams18k: number; grams21k: number; totalGrams21k: number } };
 }
 
 // Store-related component props
@@ -101,6 +101,7 @@ export interface DeleteConfirmationDialogProps {
   onConfirm: () => void;
   title?: string;
   message?: string;
+  itemName?: string;
 }
 
 // Form Data Types
@@ -108,8 +109,12 @@ export interface PurchaseFormData {
   id: string;
   storeId: string;
   date: string;
-  totalGrams: number;
-  suppliers: Record<string, number>;
+  totalGrams: number; // Always in 21k equivalent (calculated automatically)
+  suppliers: Record<string, {
+    grams18k: number;
+    grams21k: number;
+    totalGrams21k: number;
+  }>;
   totalFees: number;
   totalDiscount: number;
   netFees: number;
@@ -121,6 +126,7 @@ export interface PaymentFormData {
   feesPaid: number;
   gramsPaid: number;
   date: string;
+  karatType: KaratType;
   notes: string;
 }
 
@@ -134,8 +140,14 @@ export interface StoreFormData {
 export interface SupplierFormData {
   name: string;
   code: string;
-  karatType: KaratType;
-  discountTiers: DiscountTier[];
+  karat18: {
+    discountTiers: DiscountTier[];
+    isActive: boolean;
+  };
+  karat21: {
+    discountTiers: DiscountTier[];
+    isActive: boolean;
+  };
   isActive: boolean;
 }
 

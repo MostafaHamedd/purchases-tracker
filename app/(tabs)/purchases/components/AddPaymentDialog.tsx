@@ -32,6 +32,7 @@ export function AddPaymentDialog({ visible, onClose, onSubmit, purchase }: AddPa
       feesPaid: parseFloat(formData.feesPaid) || 0,
       gramsPaid: parseFloat(formData.gramsPaid) || 0,
       date: formData.date.toISOString().split('T')[0],
+      karatType: '21' as const, // Default to 21k for now
       notes: formData.notes
     };
 

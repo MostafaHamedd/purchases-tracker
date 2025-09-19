@@ -1,7 +1,7 @@
 import { APP_CONFIG } from '../constants';
-import { Purchase } from '../types/dataTypes';
-import { PurchaseFees } from '../types/apiTypes';
 import { mockPurchases as initialMockPurchases } from '../mockData';
+import { PurchaseFees } from '../types/apiTypes';
+import { Purchase } from '../types/dataTypes';
 
 // Mock data - this will be replaced with API calls
 let mockPurchases: Purchase[] = [...initialMockPurchases];
@@ -99,27 +99,29 @@ export const calculateDueDate = (purchaseDate: string): string => {
   return dueDate.toISOString().split('T')[0];
 };
 
-export const calculatePurchaseBaseFees = (suppliers: { [key: string]: number }): number => {
+export const calculatePurchaseBaseFees = (suppliers: { [key: string]: { grams18k: number; grams21k: number; totalGrams21k: number } }): number => {
   let totalBaseFees = 0;
   
-  Object.entries(suppliers).forEach(([supplier, grams]) => {
-    totalBaseFees += calculateBaseFee(grams);
+  Object.entries(suppliers).forEach(([supplier, supplierData]) => {
+    // Use totalGrams21k which is already converted to 21k equivalent
+    totalBaseFees += calculateBaseFee(supplierData.totalGrams21k);
   });
   
   return totalBaseFees;
 };
 
-export const calculatePurchaseTotalDiscount = (suppliers: { [key: string]: number }, purchaseDate: string): number => {
+export const calculatePurchaseTotalDiscount = (suppliers: { [key: string]: { grams18k: number; grams21k: number; totalGrams21k: number } }, purchaseDate: string): number => {
   let totalDiscount = 0;
   
-  Object.entries(suppliers).forEach(([supplier, grams]) => {
-    totalDiscount += calculateDiscountAmount(supplier, grams, purchaseDate);
+  Object.entries(suppliers).forEach(([supplier, supplierData]) => {
+    // Use totalGrams21k which is already converted to 21k equivalent
+    totalDiscount += calculateDiscountAmount(supplier, supplierData.totalGrams21k, purchaseDate);
   });
   
   return totalDiscount;
 };
 
-export const calculatePurchaseFees = (suppliers: { [key: string]: number }, purchaseDate: string): PurchaseFees => {
+export const calculatePurchaseFees = (suppliers: { [key: string]: { grams18k: number; grams21k: number; totalGrams21k: number } }, purchaseDate: string): PurchaseFees => {
   const baseFees = calculatePurchaseBaseFees(suppliers);
   const totalDiscount = calculatePurchaseTotalDiscount(suppliers, purchaseDate);
   
