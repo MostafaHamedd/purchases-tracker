@@ -19,7 +19,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
+          title: 'Home',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />
@@ -31,16 +31,23 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="purchases/[id]"
+        options={{
+          href: null, // This hides the route from the tab bar
+          tabBarButton: () => null, // Alternative way to hide from tab bar
+        }}
+      />
+      <Tabs.Screen
         name="suppliers"
         options={{
-          title: 'Gold Suppliers',
+          title: 'Suppliers',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="building.2.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="stores"
         options={{
-          title: 'Store Locations',
+          title: 'Stores',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="storefront.fill" color={color} />,
         }}
       />
