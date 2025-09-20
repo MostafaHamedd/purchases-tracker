@@ -50,7 +50,7 @@ export const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 20,
+    paddingBottom: 100, // Extra padding for tab bar
   },
   emptyState: {
     flex: 1,
@@ -257,8 +257,8 @@ export const styles = StyleSheet.create({
   },
   tierInputs: {
     flex: 1,
-    flexDirection: 'row',
-    gap: 8,
+    flexDirection: 'column',
+    gap: 0,
   },
   tierInput: {
     borderWidth: 1,
@@ -363,15 +363,16 @@ export const styles = StyleSheet.create({
   tierInputCard: {
     backgroundColor: '#F8FAFC',
     borderRadius: 8,
-    padding: 12,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    marginBottom: 8,
   },
   tierHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   tierNumber: {
     fontSize: 14,
@@ -381,13 +382,16 @@ export const styles = StyleSheet.create({
   tierInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
+    marginBottom: 8,
+    paddingHorizontal: 0,
   },
   tierInputLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '500',
     color: '#6B7280',
-    minWidth: 80,
+    width: 80,
+    flexShrink: 0,
   },
   tierTextInput: {
     flex: 1,
@@ -395,10 +399,12 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D1D5DB',
     borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
     fontSize: 14,
     color: '#1F2937',
+    minHeight: 40,
+    maxWidth: '100%',
   },
   // Edit dialog specific styles
   tierTitleContainer: {

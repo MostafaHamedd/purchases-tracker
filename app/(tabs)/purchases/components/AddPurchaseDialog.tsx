@@ -1,5 +1,4 @@
-import { mockSuppliers } from '@/data/mockData';
-import { AddPurchaseDialogProps, PurchaseFormData, Store } from '@/data/types';
+import { AddPurchaseDialogProps } from '@/data/types';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -8,106 +7,227 @@ import { useStores } from '../../stores/hooks/useStores';
 export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDialogProps) {
   const { stores } = useStores();
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedStore, setSelectedStore] = useState('');
-  const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>([]);
-  const [formData, setFormData] = useState<Partial<PurchaseFormData>>({
-    storeId: '',
-    date: new Date().toISOString().split('T')[0],
-    suppliers: {},
-    totalFees: 0,
-    totalDiscount: 0,
-    netFees: 0,
-    status: 'Pending'
+  const [selectedStoreId, setSelectedStoreId] = useState('');
+  const [formData, setFormData] = useState({
+    store: '',
+    date: new Date(),
+    totalGrams: 0,
+    selectedSuppliers: [] as string[],
+    suppliers: {
+      'ES18': { grams: 0, fees: 0, discountRate: 10 },
+      'EG18': { grams: 0, fees: 0, discountRate: 34 },
+      'EG21': { grams: 0, fees: 0, discountRate: 23 }
+    } as Record<string, { grams: number; fees: number; discountRate: number }>,
+    supplierReceipts: {} as Record<string, string[]>,
+    receiptData: {} as Record<string, { grams: number; fees: number }>
   });
 
   const toggleSupplier = (supplier: string) => {
-    setSelectedSuppliers(prev => 
-      prev.includes(supplier)
-        ? prev.filter(s => s !== supplier)
-        : [...prev, supplier]
-    );
+    setFormData(prev => ({
+      ...prev,
+      selectedSuppliers: prev.selectedSuppliers.includes(supplier)
+        ? prev.selectedSuppliers.filter(s => s !== supplier)
+        : [...prev.selectedSuppliers, supplier],
+      supplierReceipts: prev.selectedSuppliers.includes(supplier)
+        ? { ...prev.supplierReceipts, [supplier]: [] }
+        : { ...prev.supplierReceipts, [supplier]: [supplier] },
+      receiptData: prev.selectedSuppliers.includes(supplier)
+        ? { ...prev.receiptData, [supplier]: { grams: 0, fees: 0 } }
+        : { ...prev.receiptData, [supplier]: { grams: 0, fees: 0 } }
+    }));
   };
 
-  const updateSupplierGrams = (supplier: string, grams: number) => {
+  const addReceipt = (supplier: string) => {
+    setFormData(prev => {
+      const currentReceipts = prev.supplierReceipts[supplier] || [supplier];
+      const newReceiptNumber = currentReceipts.length + 1;
+      const newReceiptId = `${supplier}-${newReceiptNumber}`;
+      
+      return {
+        ...prev,
+        supplierReceipts: {
+          ...prev.supplierReceipts,
+          [supplier]: [...currentReceipts, newReceiptId]
+        },
+        receiptData: {
+          ...prev.receiptData,
+          [newReceiptId]: { grams: 0, fees: 0 }
+        }
+      };
+    });
+  };
+
+  const removeReceipt = (supplier: string, receiptId: string) => {
+    setFormData(prev => {
+      const currentReceipts = prev.supplierReceipts[supplier] || [supplier];
+      // Don't allow removing the first receipt (the original supplier)
+      if (receiptId === supplier || currentReceipts.length <= 1) {
+        return prev;
+      }
+      
+      const newReceiptData = { ...prev.receiptData };
+      delete newReceiptData[receiptId];
+      
+      return {
+        ...prev,
+        supplierReceipts: {
+          ...prev.supplierReceipts,
+          [supplier]: currentReceipts.filter(id => id !== receiptId)
+        },
+        receiptData: newReceiptData
+      };
+    });
+  };
+
+  const updateSupplierData = (supplier: string, field: 'grams' | 'fees', value: number) => {
     setFormData(prev => ({
       ...prev,
       suppliers: {
         ...prev.suppliers,
         [supplier]: {
-          grams18k: 0,
-          grams21k: grams,
-          totalGrams21k: grams
+          ...prev.suppliers[supplier],
+          [field]: value
         }
       }
     }));
   };
 
-  // Calculate total grams from all supplier entries
-  const calculateTotalGrams = () => {
-    let total = 0;
-    Object.values(formData.suppliers || {}).forEach(supplier => {
-      if (supplier && typeof supplier === 'object') {
-        total += supplier.totalGrams21k || 0;
+  const updateReceiptData = (receiptId: string, field: 'grams' | 'fees', value: number) => {
+    setFormData(prev => ({
+      ...prev,
+      receiptData: {
+        ...prev.receiptData,
+        [receiptId]: {
+          ...prev.receiptData[receiptId],
+          [field]: value
+        }
       }
-    });
-    return Math.round(total * 10) / 10; // Round to 1 decimal place
+    }));
+  };
+
+  // Calculate total grams from all receipt entries
+  const calculateTotalGrams = () => {
+    const allReceipts = formData.selectedSuppliers.flatMap(supplier => 
+      formData.supplierReceipts[supplier] || [supplier]
+    );
+    
+    return allReceipts.reduce((sum, receiptId) => {
+      const data = formData.receiptData[receiptId] || { grams: 0, fees: 0 };
+      return sum + data.grams;
+    }, 0);
   };
 
   const totalGrams = calculateTotalGrams();
 
-  const handleClose = () => {
-    setSelectedStore('');
-    setSelectedSuppliers([]);
-    setFormData({
-      storeId: '',
-      date: new Date().toISOString().split('T')[0],
-      suppliers: {},
-      totalFees: 0,
-      totalDiscount: 0,
-      netFees: 0,
-      status: 'Pending'
-    });
-    onClose();
-  };
-
   const handleSubmit = () => {
-    if (!selectedStore) {
+    if (!selectedStoreId) {
       Alert.alert('Error', 'Please select a store');
       return;
     }
 
     if (totalGrams <= 0) {
-      Alert.alert('Error', 'Please enter grams for at least one supplier');
+      Alert.alert('Error', 'Please enter grams for at least one receipt');
       return;
     }
 
-    if (selectedSuppliers.length === 0) {
+    if (formData.selectedSuppliers.length === 0) {
       Alert.alert('Error', 'Please select at least one supplier');
       return;
     }
 
-    // Calculate total fees and discount (simplified calculation)
-    const totalFees = totalGrams * 5; // Base fee per gram
-    const totalDiscount = totalGrams >= 1000 ? totalFees * 0.1 : 0; // 10% discount for 1000g+
-    const netFees = totalFees - totalDiscount;
+    // Check if all receipts have valid data
+    const allReceipts = formData.selectedSuppliers.flatMap(supplier => 
+      formData.supplierReceipts[supplier] || [supplier]
+    );
+    
+    const hasValidData = allReceipts.every(receiptId => {
+      const data = formData.receiptData[receiptId] || { grams: 0, fees: 0 };
+      return data.grams > 0 && data.fees > 0;
+    });
 
-    const purchaseData: PurchaseFormData = {
+    if (!hasValidData) {
+      Alert.alert('Error', 'Please enter valid grams and fees for all receipts');
+      return;
+    }
+
+    // Calculate supplier totals from receipt data
+    const selectedSuppliersData = formData.selectedSuppliers.reduce((acc, supplier) => {
+      const supplierReceipts = formData.supplierReceipts[supplier] || [supplier];
+      const supplierTotalGrams = supplierReceipts.reduce((sum, receiptId) => {
+        const data = formData.receiptData[receiptId] || { grams: 0, fees: 0 };
+        return sum + data.grams;
+      }, 0);
+      acc[supplier] = {
+        grams18k: 0, // This would need to be calculated based on actual supplier data
+        grams21k: supplierTotalGrams,
+        totalGrams21k: supplierTotalGrams
+      };
+      return acc;
+    }, {} as Record<string, { grams18k: number; grams21k: number; totalGrams21k: number }>);
+
+    const purchaseData = {
       id: Date.now().toString(),
-      storeId: selectedStore,
-      date: formData.date || new Date().toISOString().split('T')[0],
-      totalGrams,
-      suppliers: formData.suppliers || {},
-      totalFees,
-      totalDiscount,
-      netFees,
+      storeId: selectedStoreId,
+      date: formData.date.toISOString().split('T')[0],
+      totalGrams: totalGrams,
+      suppliers: selectedSuppliersData,
+      totalFees: totalGrams * 5,
+      totalDiscount: totalGrams * 10,
+      netFees: totalGrams * -5,
       status: 'Pending'
     };
 
     onSubmit(purchaseData);
-    handleClose();
   };
 
-  if (!visible) return null;
+  // Helper functions for dynamic calculations
+  const getTotalEnteredGrams = () => {
+    const allReceipts = formData.selectedSuppliers.flatMap(supplier => 
+      formData.supplierReceipts[supplier] || [supplier]
+    );
+    
+    return allReceipts.reduce((sum, receiptId) => {
+      const data = formData.receiptData[receiptId] || { grams: 0, fees: 0 };
+      return sum + data.grams;
+    }, 0);
+  };
+
+  const getTotalEnteredFees = () => {
+    const allReceipts = formData.selectedSuppliers.flatMap(supplier => 
+      formData.supplierReceipts[supplier] || [supplier]
+    );
+    
+    return allReceipts.reduce((sum, receiptId) => {
+      const data = formData.receiptData[receiptId] || { grams: 0, fees: 0 };
+      return sum + data.fees;
+    }, 0);
+  };
+
+  const getTotalDiscount = () => {
+    const allReceipts = formData.selectedSuppliers.flatMap(supplier => 
+      formData.supplierReceipts[supplier] || [supplier]
+    );
+    
+    return allReceipts.reduce((sum, receiptId) => {
+      const data = formData.receiptData[receiptId] || { grams: 0, fees: 0 };
+      const supplier = formData.selectedSuppliers.find(s => 
+        formData.supplierReceipts[s]?.includes(receiptId) || s === receiptId
+      );
+      const supplierData = supplier ? formData.suppliers[supplier] : { discountRate: 0 };
+      return sum + (data.grams * supplierData.discountRate);
+    }, 0);
+  };
+
+  const getEnteredGramsColor = () => {
+    const entered = getTotalEnteredGrams();
+    if (entered === 0) return '#6B7280';
+    return '#10B981';
+  };
+
+  const getMaxGramsForReceipt = (receiptId: string) => {
+    const currentGrams = formData.receiptData[receiptId]?.grams || 0;
+    return currentGrams + 1000; // Allow up to 1000g more than current
+  };
 
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -116,21 +236,21 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
             <Text style={styles.sectionTitle}>Select Store</Text>
             <View style={styles.storeButtons}>
-              {stores.map((store: Store) => (
+              {stores.map((store) => (
                 <TouchableOpacity
                   key={store.id}
                   style={[
                     styles.storeButton,
-                    selectedStore === store.id && styles.selectedStoreButton
+                    selectedStoreId === store.id && styles.selectedStoreButton
                   ]}
                   onPress={() => {
-                    setSelectedStore(store.id);
-                    setFormData(prev => ({ ...prev, storeId: store.id }));
+                    setSelectedStoreId(store.id);
+                    setFormData(prev => ({ ...prev, store: store.name }));
                   }}
                 >
                   <Text style={[
                     styles.storeButtonText,
-                    selectedStore === store.id && styles.selectedStoreButtonText
+                    selectedStoreId === store.id && styles.selectedStoreButtonText
                   ]}>
                     {store.name}
                   </Text>
@@ -144,27 +264,28 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
               onPress={() => setShowDatePicker(!showDatePicker)}
             >
               <Text style={styles.datePickerButtonText}>
-                {formData.date || 'Select Date'}
+                {formData.date.toLocaleDateString('en-US', { 
+                  year: 'numeric', 
+                  month: 'short', 
+                  day: 'numeric' 
+                })}
               </Text>
             </TouchableOpacity>
-
+            
             {showDatePicker && (
               <View style={styles.datePickerContainer}>
                 <DateTimePicker
-                  value={new Date(formData.date || new Date())}
+                  value={formData.date}
                   mode="date"
                   display="spinner"
                   textColor="#000000"
                   onChange={(event, selectedDate) => {
                     if (selectedDate) {
-                      setFormData(prev => ({ 
-                        ...prev, 
-                        date: selectedDate.toISOString().split('T')[0] 
-                      }));
+                      setFormData(prev => ({ ...prev, date: selectedDate }));
                     }
                   }}
                 />
-                <TouchableOpacity
+                <TouchableOpacity 
                   style={styles.datePickerDoneButton}
                   onPress={() => setShowDatePicker(false)}
                 >
@@ -175,84 +296,140 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
 
             {/* Purchase Summary */}
             {totalGrams > 0 && (
-              <View style={styles.summaryCard}>
-                <Text style={styles.summaryTitle}>Purchase Summary</Text>
+              <View style={styles.gramsSummary}>
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Total Grams (21k equivalent):</Text>
-                  <Text style={styles.summaryValue}>{totalGrams}g</Text>
+                  <Text style={styles.summaryLabel}>Total Grams:</Text>
+                  <Text style={[styles.summaryValue, { color: getEnteredGramsColor() }]}>
+                    {totalGrams}g
+                  </Text>
                 </View>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Base Fees:</Text>
-                  <Text style={styles.summaryValue}>EGP {(totalGrams * 5).toLocaleString()}</Text>
+                  <Text style={styles.summaryValue}>EGP {getTotalEnteredFees().toLocaleString()}</Text>
                 </View>
-                {totalGrams >= 1000 && (
+                {getTotalDiscount() > 0 && (
                   <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Discount (10%):</Text>
-                    <Text style={[styles.summaryValue, styles.discountValue]}>-EGP {(totalGrams * 5 * 0.1).toLocaleString()}</Text>
+                    <Text style={styles.summaryLabel}>Total Discount:</Text>
+                    <Text style={[styles.summaryValue, { color: '#10B981' }]}>EGP {getTotalDiscount().toLocaleString()}</Text>
                   </View>
                 )}
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Net Fees:</Text>
-                  <Text style={[styles.summaryValue, styles.netFeesValue]}>
-                    EGP {((totalGrams * 5) - (totalGrams >= 1000 ? totalGrams * 5 * 0.1 : 0)).toLocaleString()}
+                  <Text style={[styles.summaryValue, { color: (getTotalEnteredFees() - getTotalDiscount()) < 0 ? '#3B82F6' : '#EF4444' }]}>
+                    EGP {(getTotalEnteredFees() - getTotalDiscount()).toLocaleString()}
                   </Text>
                 </View>
               </View>
             )}
 
-            {selectedSuppliers.length > 0 && (
-              <Text style={styles.sectionTitle}>Enter Grams for Each Supplier</Text>
-            )}
-
+            <Text style={styles.sectionTitle}>Select Suppliers</Text>
             <View style={styles.supplierButtons}>
-              {mockSuppliers.map((supplier) => (
+              {['ES18', 'EG18', 'EG21'].map((supplier) => (
                 <TouchableOpacity
-                  key={supplier.code}
+                  key={supplier}
                   style={[
                     styles.supplierButton,
-                    selectedSuppliers.includes(supplier.code) && styles.selectedSupplierButton
+                    formData.selectedSuppliers.includes(supplier) && styles.selectedSupplierButton
                   ]}
-                  onPress={() => toggleSupplier(supplier.code)}
+                  onPress={() => toggleSupplier(supplier)}
                 >
                   <Text style={[
                     styles.supplierButtonText,
-                    selectedSuppliers.includes(supplier.code) && styles.selectedSupplierButtonText
+                    formData.selectedSuppliers.includes(supplier) && styles.selectedSupplierButtonText
                   ]}>
-                    {supplier.name}
+                    {supplier}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            {selectedSuppliers.map((supplierCode) => {
-              const supplierData = formData.suppliers?.[supplierCode];
-              const grams21k = supplierData && typeof supplierData === 'object' ? supplierData.grams21k : 0;
-              const supplier = mockSuppliers.find(s => s.code === supplierCode);
-              const supplierName = supplier ? supplier.name : supplierCode;
+            {formData.selectedSuppliers.length > 0 && (
+              <Text style={styles.sectionTitle}>Enter Grams and Fees for Each Supplier</Text>
+            )}
+            
+            {formData.selectedSuppliers.map((supplier) => {
+              const receipts = formData.supplierReceipts[supplier] || [supplier];
+              const supplierData = formData.suppliers[supplier];
               
               return (
-                <View key={supplierCode} style={styles.supplierInputGroup}>
-                  <Text style={styles.supplierLabel}>{supplierName} Grams (21k):</Text>
-                  <TextInput
-                    style={[styles.input, { fontSize: 12 }]}
-                    value={grams21k.toString()}
-                    onChangeText={(text) => updateSupplierGrams(supplierCode, parseFloat(text) || 0)}
-                    placeholder={`Enter grams for ${supplierName}`}
-                    placeholderTextColor="#6B7280"
-                    keyboardType="numeric"
-                  />
-                  {grams21k > 0 && (
-                    <Text style={styles.supplierHint}>
-                      {supplierName}: {grams21k}g (21k equivalent)
-                    </Text>
-                  )}
+                <View key={supplier} style={styles.supplierCard}>
+                  <View style={styles.supplierCardHeader}>
+                    <Text style={styles.supplierName}>{supplier}</Text>
+                    <TouchableOpacity 
+                      style={styles.addButton}
+                      onPress={() => addReceipt(supplier)}
+                    >
+                      <Text style={styles.addButtonText}>+</Text>
+                    </TouchableOpacity>
+                  </View>
+                  
+                  {receipts.map((receiptId, index) => {
+                    const receiptData = formData.receiptData[receiptId] || { grams: 0, fees: 0 };
+                    const discount = receiptData.grams * (supplierData?.discountRate || 0);
+                    
+                    return (
+                      <View key={receiptId} style={styles.receiptCard}>
+                        <View style={styles.receiptHeader}>
+                          <Text style={styles.receiptTitle}>
+                            {receiptId === supplier ? 'Receipt 1' : `Receipt ${index + 1}`}
+                          </Text>
+                          {receiptId !== supplier && receipts.length > 1 && (
+                            <TouchableOpacity 
+                              style={styles.removeButton}
+                              onPress={() => removeReceipt(supplier, receiptId)}
+                            >
+                              <Text style={styles.removeButtonText}>−</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                        
+                        <View style={styles.inputRow}>
+                          <View style={styles.inputContainer}>
+                            <Text style={styles.inputLabel}>Grams</Text>
+                            <TextInput
+                              style={[styles.input, { fontSize: 12 }]}
+                              value={receiptData.grams > 0 ? receiptData.grams.toString() : ''}
+                              onChangeText={(text) => updateReceiptData(receiptId, 'grams', parseInt(text) || 0)}
+                              placeholder="0"
+                              placeholderTextColor="#6B7280"
+                              keyboardType="numeric"
+                            />
+                            <Text style={styles.hintText}>
+                              Max: {getMaxGramsForReceipt(receiptId)}g
+                            </Text>
+                          </View>
+                          
+                          <View style={styles.inputContainer}>
+                            <Text style={styles.inputLabel}>Fees (EGP)</Text>
+                            <TextInput
+                              style={[styles.input, { fontSize: 12 }]}
+                              value={receiptData.fees > 0 ? receiptData.fees.toString() : ''}
+                              onChangeText={(text) => updateReceiptData(receiptId, 'fees', parseInt(text) || 0)}
+                              placeholder="0"
+                              placeholderTextColor="#6B7280"
+                              keyboardType="numeric"
+                            />
+                          </View>
+                        </View>
+                        
+                        {receiptData.grams > 0 && (
+                          <View style={styles.discountContainer}>
+                            <View style={styles.discountLeftBar} />
+                            <Text style={styles.discountText}>
+                              Discount: {supplierData.discountRate} EGP/g = EGP {discount.toLocaleString()}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
                 </View>
               );
             })}
           </ScrollView>
 
           <View style={styles.buttons}>
-            <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
+            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
@@ -274,198 +451,297 @@ const styles = StyleSheet.create({
   },
   dialog: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 20,
-    margin: 20,
-    maxWidth: '90%',
+    borderRadius: 16,
+    padding: 24,
+    margin: 24,
+    maxWidth: 400,
     maxHeight: '90%',
   },
   scrollView: {
     maxHeight: 500,
+  },
+  dateDisplay: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  datePickerContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  datePickerDoneButton: {
+    backgroundColor: '#000000',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  datePickerDoneText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  supplierCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1F2937',
     marginBottom: 12,
-    marginTop: 16,
   },
   storeButtons: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   storeButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#D1D5DB',
-    backgroundColor: '#F9FAFB',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flex: 1,
   },
   selectedStoreButton: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
+    backgroundColor: '#000000',
+    borderColor: '#000000',
   },
   storeButtonText: {
     fontSize: 14,
-    color: '#374151',
+    fontWeight: '500',
+    color: '#6B7280',
+    textAlign: 'center',
   },
   selectedStoreButtonText: {
     color: '#FFFFFF',
   },
   datePickerButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#D1D5DB',
-    backgroundColor: '#F9FAFB',
-    marginBottom: 16,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 20,
   },
   datePickerButtonText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#1F2937',
+    textAlign: 'center',
   },
-  datePickerContainer: {
-    backgroundColor: '#FFFFFF',
+  gramsSummary: {
+    backgroundColor: '#F9FAFB',
     borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
+    padding: 12,
+    marginBottom: 20,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-  },
-  datePickerDoneButton: {
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-    alignSelf: 'flex-end',
-    marginTop: 12,
-  },
-  datePickerDoneText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  summaryCard: {
-    backgroundColor: '#F0F9FF',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-  },
-  summaryTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E40AF',
-    marginBottom: 12,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#374151',
-    flex: 1,
+    fontWeight: '500',
+    color: '#6B7280',
   },
   summaryValue: {
     fontSize: 14,
     fontWeight: '600',
     color: '#1F2937',
   },
-  discountValue: {
-    color: '#10B981',
+  hintText: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    marginTop: 2,
+    fontStyle: 'italic',
   },
-  netFeesValue: {
-    color: '#1E40AF',
-    fontSize: 16,
+  warningHint: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 6,
+    padding: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+  },
+  warningText: {
+    fontSize: 12,
+    color: '#92400E',
+    textAlign: 'center',
   },
   supplierButtons: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   supplierButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#D1D5DB',
-    backgroundColor: '#F9FAFB',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flex: 1,
   },
   selectedSupplierButton: {
-    backgroundColor: '#10B981',
-    borderColor: '#10B981',
+    backgroundColor: '#000000',
+    borderColor: '#000000',
   },
   supplierButtonText: {
     fontSize: 14,
-    color: '#374151',
+    fontWeight: '500',
+    color: '#6B7280',
+    textAlign: 'center',
   },
   selectedSupplierButtonText: {
     color: '#FFFFFF',
   },
-  supplierInputGroup: {
-    marginBottom: 16,
+  supplierCard: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
   },
-  supplierLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+  supplierName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    gap: 8,
     marginBottom: 8,
   },
-  supplierHint: {
+  inputContainer: {
+    flex: 1,
+  },
+  inputLabel: {
     fontSize: 12,
+    fontWeight: '500',
     color: '#6B7280',
-    marginTop: 4,
-    fontStyle: 'italic',
+    marginBottom: 4,
   },
   input: {
     borderWidth: 1,
     borderColor: '#D1D5DB',
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    color: '#1F2937',
+    paddingVertical: 8,
+    fontSize: 14,
     backgroundColor: '#FFFFFF',
+    color: '#1F2937',
+  },
+  addButton: {
+    backgroundColor: '#9CA3AF',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  receiptContainer: {
+    marginBottom: 12,
+  },
+  receiptCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  receiptHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  receiptTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  removeButton: {
+    backgroundColor: '#EF4444',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  discountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    borderRadius: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 8,
+  },
+  discountLeftBar: {
+    width: 4,
+    height: 20,
+    backgroundColor: '#3B82F6',
+    borderRadius: 2,
+    marginRight: 8,
+  },
+  discountText: {
+    fontSize: 12,
+    color: '#1E40AF',
+    fontWeight: '500',
+    flex: 1,
   },
   buttons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 20,
     gap: 12,
+    marginTop: 20,
   },
   cancelButton: {
-    flex: 1,
-    paddingVertical: 12,
+    backgroundColor: '#9CA3AF',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#F9FAFB',
-    alignItems: 'center',
-  },
-  submitButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: '#3B82F6',
-    alignItems: 'center',
   },
   cancelText: {
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
+  },
+  submitButton: {
+    backgroundColor: '#000000',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
   },
   submitText: {
-    fontSize: 16,
-    fontWeight: '600',
     color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '500',
   },
 });

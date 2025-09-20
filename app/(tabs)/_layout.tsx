@@ -53,6 +53,14 @@ export default function TabLayout() {
           tabBarButton: HapticTab,
         }}
       />
+      <Tabs.Screen
+        name="history/index"
+        options={{
+          title: 'History',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="clock.fill" color={color} />,
+          tabBarButton: HapticTab,
+        }}
+      />
     </Tabs>
   );
 }

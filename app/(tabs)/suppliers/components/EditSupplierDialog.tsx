@@ -30,10 +30,23 @@ export function EditSupplierDialog({
     if (supplier) {
       setName(supplier.name);
       setCode(supplier.code);
-      setKaratType(supplier.karatType);
-      setTiers([...supplier.discountTiers]);
+      // Default to 18k karat type and use its discount tiers
+      setKaratType('18');
+      setTiers([...(supplier.karat18?.discountTiers || [])]);
     }
   }, [supplier]);
+
+  // Update tiers when karat type changes
+  const handleKaratTypeChange = (newKaratType: KaratType) => {
+    setKaratType(newKaratType);
+    if (supplier) {
+      if (newKaratType === '18') {
+        setTiers([...(supplier.karat18?.discountTiers || [])]);
+      } else {
+        setTiers([...(supplier.karat21?.discountTiers || [])]);
+      }
+    }
+  };
 
   const handleSubmit = () => {
     if (!supplier) return;
@@ -75,14 +88,23 @@ export function EditSupplierDialog({
 
     // Submit supplier data
     onSubmitSupplier({
-      id: supplier.id,
       name: name.trim(),
       code: code.trim().toUpperCase(),
-      karatType,
-      discountTiers: validTiers.map((tier, index) => ({
-        ...tier,
-        name: tier.name.trim(),
-      })),
+      karat18: {
+        discountTiers: karatType === '18' ? validTiers.map((tier, index) => ({
+          ...tier,
+          name: tier.name.trim(),
+        })) : (supplier.karat18?.discountTiers || []),
+        isActive: karatType === '18'
+      },
+      karat21: {
+        discountTiers: karatType === '21' ? validTiers.map((tier, index) => ({
+          ...tier,
+          name: tier.name.trim(),
+        })) : (supplier.karat21?.discountTiers || []),
+        isActive: karatType === '21'
+      },
+      isActive: supplier.isActive
     });
 
     // Reset form
@@ -194,7 +216,7 @@ export function EditSupplierDialog({
                       styles.radioOption,
                       karatType === karat && styles.radioOptionSelected
                     ]}
-                    onPress={() => setKaratType(karat)}
+                    onPress={() => handleKaratTypeChange(karat)}
                   >
                     <View style={[
                       styles.radioButton,

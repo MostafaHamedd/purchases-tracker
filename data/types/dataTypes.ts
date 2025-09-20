@@ -74,3 +74,20 @@ export interface Store {
   createdAt: string;
   updatedAt: string;
 }
+
+// History/Analytics Types
+export interface MonthData {
+  year: number;
+  month: number;
+  monthName: string;
+  purchases: Purchase[];
+  totalGrams: number;
+  totalFees: number;
+  totalDiscount: number;
+  netFees: number;
+  storeBreakdown: Record<string, {
+    purchases: Purchase[];
+    totalGrams: number;
+    totalFees: number;
+  }>;
+}

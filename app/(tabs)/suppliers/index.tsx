@@ -1,18 +1,17 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  TouchableOpacity,
-  Alert
+import {
+    Alert,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ThemedText } from '@/components/themed-text';
-import { SupplierCard } from './components/SupplierCard';
 import { AddSupplierDialog } from './components/AddSupplierDialog';
-import { EditSupplierDialog } from './components/EditSupplierDialog';
 import { DeleteConfirmationDialog } from './components/DeleteConfirmationDialog';
-import { useSuppliers, Supplier } from './hooks/useSuppliers';
+import { EditSupplierDialog } from './components/EditSupplierDialog';
+import { SupplierCard } from './components/SupplierCard';
+import { Supplier, useSuppliers } from './hooks/useSuppliers';
 import { styles } from './styles';
 
 export default function SuppliersScreen() {
@@ -45,21 +44,23 @@ export default function SuppliersScreen() {
     }
   };
 
-  const handleSubmitNewSupplier = (supplierData: { name: string; code: string; karatType: any; discountTiers: any[] }) => {
+  const handleSubmitNewSupplier = (supplierData: { name: string; code: string; karat18: any; karat21: any; isActive: boolean }) => {
     addSupplier(supplierData);
     setShowAddDialog(false);
     Alert.alert('Success', 'Supplier added successfully!');
   };
 
-  const handleSubmitEditSupplier = (supplierData: { id: string; name: string; code: string; karatType: any; discountTiers: any[] }) => {
-    updateSupplier(supplierData.id, supplierData);
-    setShowEditDialog(false);
-    setSupplierToEdit(null);
-    Alert.alert('Success', 'Supplier updated successfully!');
+  const handleSubmitEditSupplier = (supplierData: { name: string; code: string; karat18: any; karat21: any; isActive: boolean }) => {
+    if (supplierToEdit) {
+      updateSupplier(supplierToEdit.id, supplierData);
+      setShowEditDialog(false);
+      setSupplierToEdit(null);
+      Alert.alert('Success', 'Supplier updated successfully!');
+    }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Navigation Bar */}
       <View style={styles.navBar}>
         <View style={styles.navContent}>

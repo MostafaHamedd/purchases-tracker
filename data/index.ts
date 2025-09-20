@@ -18,50 +18,32 @@ export * from './business';
 export * from './services';
 
 // Legacy exports for backward compatibility
-export { 
-  getMockPurchases as mockPurchases,
-  getCurrentMonthTotalGrams,
-  getDiscountRate,
-  shouldApplyDiscount,
-  generatePurchaseId,
-  generatePaymentId,
-  calculateBaseFee,
-  calculateDiscountAmount,
-  calculateNetFee,
-  calculateDueDate,
-  calculatePurchaseBaseFees,
-  calculatePurchaseTotalDiscount,
-  calculatePurchaseFees
+export {
+    calculateBaseFee,
+    calculateDiscountAmount, calculateDueDate, calculateNetFee, calculatePurchaseBaseFees, calculatePurchaseFees, calculatePurchaseTotalDiscount, generatePaymentId, generatePurchaseId, getCurrentMonthTotalGrams,
+    getDiscountRate, getMockPurchases as mockPurchases, shouldApplyDiscount
 } from './business';
 
 export {
-  APP_CONFIG as availableSuppliers,
-  APP_CONFIG as availableStores,
-  APP_CONFIG as BASE_FEE_PER_GRAM,
-  APP_CONFIG as DEFAULT_PAYMENT_TERMS_DAYS,
-  APP_CONFIG as discountRates,
-  APP_CONFIG as MONTHLY_DISCOUNT_THRESHOLDS
+    APP_CONFIG as BASE_FEE_PER_GRAM,
+    APP_CONFIG as DEFAULT_PAYMENT_TERMS_DAYS, APP_CONFIG as MONTHLY_DISCOUNT_THRESHOLDS, APP_CONFIG as availableStores, APP_CONFIG as availableSuppliers, APP_CONFIG as discountRates
 } from './constants';
 
 export {
-  getStatusColor,
-  formatDate,
-  formatCurrency,
-  getDaysLeft,
-  getDaysLeftText,
-  getProgressBarColor,
-  calculateStatus,
-  debugDates
+    calculateStatus,
+    debugDates, formatCurrency, formatDate, getDaysLeft,
+    getDaysLeftText,
+    getProgressBarColor, getStatusColor
 } from './utils';
 
 // Re-export services for easy access
-export { PurchaseService, PaymentService, AnalyticsService } from './services';
+export { AnalyticsService, HistoryService, PaymentService, PurchaseService } from './services';
 
 // Re-export recalculation service
-export { RecalculationService, recalculateCurrentMonth, recalculateAfterPaymentChange, recalculateAfterPurchaseChange } from './services/recalculationService';
+export { RecalculationService, recalculateAfterPaymentChange, recalculateAfterPurchaseChange, recalculateCurrentMonth } from './services/recalculationService';
 
 // Re-export refresh events
-export { refreshEvents, emitPurchaseUpdated, emitPaymentAdded, emitPaymentDeleted, emitSupplierUpdated, emitStoreUpdated } from './services/refreshEvents';
+export { emitPaymentAdded, emitPaymentDeleted, emitPurchaseUpdated, emitStoreUpdated, emitSupplierUpdated, refreshEvents } from './services/refreshEvents';
 
 // Mock Data
 export * from './mockData';
