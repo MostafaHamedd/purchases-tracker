@@ -20,7 +20,7 @@ export default function SuppliersScreen() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [supplierToDelete, setSupplierToDelete] = useState<{ id: string; name: string } | null>(null);
   const [supplierToEdit, setSupplierToEdit] = useState<Supplier | null>(null);
-  const { suppliers, addSupplier, updateSupplier, deleteSupplier, refreshSuppliers } = useSuppliers();
+  const { suppliers, loading, error, addSupplier, updateSupplier, deleteSupplier, refreshSuppliers } = useSuppliers();
 
   const handleEditSupplier = (supplier: Supplier) => {
     setSupplierToEdit(supplier);
@@ -35,27 +35,42 @@ export default function SuppliersScreen() {
     }
   };
 
-  const confirmDeleteSupplier = () => {
+  const confirmDeleteSupplier = async () => {
     if (supplierToDelete) {
-      deleteSupplier(supplierToDelete.id);
+      const result = await deleteSupplier(supplierToDelete.id);
       setShowDeleteDialog(false);
       setSupplierToDelete(null);
-      Alert.alert('Success', 'Supplier deleted successfully!');
+      
+      if (result.success) {
+        Alert.alert('✅ Success', 'Supplier has been deleted successfully!');
+      } else {
+        Alert.alert('❌ Error', result.error || 'Failed to delete supplier. Please try again.');
+      }
     }
   };
 
-  const handleSubmitNewSupplier = (supplierData: { name: string; code: string; karat18: any; karat21: any; isActive: boolean }) => {
-    addSupplier(supplierData);
+  const handleSubmitNewSupplier = async (supplierData: { name: string; code: string; karat18: any; karat21: any; isActive: boolean }) => {
+    const result = await addSupplier(supplierData);
     setShowAddDialog(false);
-    Alert.alert('Success', 'Supplier added successfully!');
+    
+    if (result.success) {
+      Alert.alert('✅ Success', 'Supplier has been added successfully!');
+    } else {
+      Alert.alert('❌ Error', result.error || 'Failed to add supplier. Please try again.');
+    }
   };
 
-  const handleSubmitEditSupplier = (supplierData: { name: string; code: string; karat18: any; karat21: any; isActive: boolean }) => {
+  const handleSubmitEditSupplier = async (supplierData: { name: string; code: string; karat18: any; karat21: any; isActive: boolean }) => {
     if (supplierToEdit) {
-      updateSupplier(supplierToEdit.id, supplierData);
+      const result = await updateSupplier(supplierToEdit.id, supplierData);
       setShowEditDialog(false);
       setSupplierToEdit(null);
-      Alert.alert('Success', 'Supplier updated successfully!');
+      
+      if (result.success) {
+        Alert.alert('✅ Success', 'Supplier has been updated successfully!');
+      } else {
+        Alert.alert('❌ Error', result.error || 'Failed to update supplier. Please try again.');
+      }
     }
   };
 
@@ -80,7 +95,19 @@ export default function SuppliersScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {suppliers.length > 0 ? (
+        {loading ? (
+          <View style={styles.loadingState}>
+            <Text style={styles.loadingText}>Loading suppliers...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.errorState}>
+            <Text style={styles.errorTitle}>Error Loading Suppliers</Text>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={refreshSuppliers}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : suppliers.length > 0 ? (
           suppliers.map((supplier) => (
             <SupplierCard 
               key={supplier.id} 

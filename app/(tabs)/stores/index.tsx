@@ -1,28 +1,27 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  StyleSheet, 
+import {
+  Alert,
+  ScrollView,
+  Text,
   TouchableOpacity,
-  Alert
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ThemedText } from '@/components/themed-text';
-import { StoreCard } from './components/StoreCard';
+import { StoreFormData } from '../../../data/types';
 import { AddStoreDialog } from './components/AddStoreDialog';
-import { EditStoreDialog } from './components/EditStoreDialog';
 import { DeleteConfirmationDialog } from './components/DeleteConfirmationDialog';
-import { useStores, Store } from './hooks/useStores';
+import { EditStoreDialog } from './components/EditStoreDialog';
+import { StoreCard } from './components/StoreCard';
+import { Store, useStores } from './hooks/useStores';
 import { styles } from './styles';
 
 export default function StoresScreen() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [storeToDelete, setStoreToDelete] = useState<{ id: string; name: string } | null>(null);
-  const [storeToEdit, setStoreToEdit] = useState<Store | null>(null);
-  const { stores, addStore, updateStore, deleteStore, refreshStores } = useStores();
+  const [storeToDelete, setStoreToDelete] = useState<{ id: string; name: string } | undefined>(undefined);
+  const [storeToEdit, setStoreToEdit] = useState<Store | undefined>(undefined);
+  const { stores, loading, error, addStore, updateStore, deleteStore, refreshStores } = useStores();
 
   const handleEditStore = (store: Store) => {
     setStoreToEdit(store);
@@ -37,43 +36,41 @@ export default function StoresScreen() {
     }
   };
 
-  const confirmDeleteStore = () => {
+  const confirmDeleteStore = async () => {
     if (storeToDelete) {
-      deleteStore(storeToDelete.id);
+      const result = await deleteStore(storeToDelete.id);
       setShowDeleteDialog(false);
-      setStoreToDelete(null);
-      Alert.alert('Success', 'Store deleted successfully!');
+      setStoreToDelete(undefined);
+      
+      if (result.success) {
+        Alert.alert('✅ Success', 'Store has been deleted successfully!');
+      } else {
+        Alert.alert('❌ Error', result.error || 'Failed to delete store. Please try again.');
+      }
     }
   };
 
-  const handleSubmitNewStore = (storeData: {
-    name: string;
-    code: string;
-    address: string;
-    phone?: string;
-    email?: string;
-    manager?: string;
-    isActive: boolean;
-  }) => {
-    addStore(storeData);
+  const handleSubmitNewStore = async (storeData: StoreFormData) => {
+    const result = await addStore(storeData);
     setShowAddDialog(false);
-    Alert.alert('Success', 'Store added successfully!');
+    
+    if (result.success) {
+      Alert.alert('✅ Success', 'Store has been added successfully!');
+    } else {
+      Alert.alert('❌ Error', result.error || 'Failed to add store. Please try again.');
+    }
   };
 
-  const handleSubmitEditStore = (storeData: {
-    id: string;
-    name: string;
-    code: string;
-    address: string;
-    phone?: string;
-    email?: string;
-    manager?: string;
-    isActive: boolean;
-  }) => {
-    updateStore(storeData.id, storeData);
+  const handleSubmitEditStore = async (storeData: StoreFormData & { id: string }) => {
+    const result = await updateStore(storeData.id, storeData);
     setShowEditDialog(false);
-    setStoreToEdit(null);
-    Alert.alert('Success', 'Store updated successfully!');
+    setStoreToEdit(undefined);
+    
+    if (result.success) {
+      Alert.alert('✅ Success', 'Store has been updated successfully!');
+    } else {
+      Alert.alert('❌ Error', result.error || 'Failed to update store. Please try again.');
+    }
   };
 
   return (
@@ -97,7 +94,19 @@ export default function StoresScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {stores.length > 0 ? (
+        {loading ? (
+          <View style={styles.loadingState}>
+            <Text style={styles.loadingText}>Loading stores...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.errorState}>
+            <Text style={styles.errorTitle}>Error Loading Stores</Text>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={refreshStores}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : stores.length > 0 ? (
           stores.map((store) => (
             <StoreCard 
               key={store.id} 
@@ -128,7 +137,7 @@ export default function StoresScreen() {
         visible={showEditDialog}
         onClose={() => {
           setShowEditDialog(false);
-          setStoreToEdit(null);
+          setStoreToEdit(undefined);
         }}
         onSubmitStore={handleSubmitEditStore}
         store={storeToEdit}
@@ -139,7 +148,7 @@ export default function StoresScreen() {
         visible={showDeleteDialog}
         onClose={() => {
           setShowDeleteDialog(false);
-          setStoreToDelete(null);
+          setStoreToDelete(undefined);
         }}
         onConfirm={confirmDeleteStore}
         title="Delete Store"

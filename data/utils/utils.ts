@@ -1,5 +1,5 @@
 import { APP_CONFIG, StatusType } from '../constants';
-import { Purchase } from '../types/dataTypes';
+import { Purchase, PurchaseStatus } from '../types/dataTypes';
 
 // Date utility functions
 export const getDateString = (daysFromToday: number): string => {
@@ -70,7 +70,7 @@ export const getStatusColor = (status: StatusType): string => {
   return APP_CONFIG.STATUS_COLORS[status] || APP_CONFIG.STATUS_COLORS.default;
 };
 
-export const calculateStatus = (purchase: Purchase): StatusType => {
+export const calculateStatus = (purchase: Purchase): PurchaseStatus => {
   const daysLeft = getDaysLeft(purchase.dueDate);
   
   // Calculate remaining amounts (not percentages)
@@ -125,6 +125,27 @@ export const getProgressBarColor = (purchase: Purchase): string => {
     return '#FDE047'; // Yellow - Next 5 days (Warning)
   } else {
     return '#3B82F6'; // Blue - First 15 days (Good)
+  }
+};
+
+// Karat conversion utilities
+export const convertTo21kEquivalent = (grams: number, karatType: '18' | '21'): number => {
+  // Safety checks for invalid inputs
+  if (typeof grams !== 'number' || isNaN(grams) || grams < 0) {
+    console.warn('Invalid grams value in convertTo21kEquivalent:', grams);
+    return 0;
+  }
+  
+  if (!karatType || (karatType !== '18' && karatType !== '21')) {
+    console.warn('Invalid karatType in convertTo21kEquivalent:', karatType);
+    return grams; // Default to treating as 21k
+  }
+  
+  if (karatType === '21') {
+    return grams; // Already 21k
+  } else {
+    // Convert 18k to 21k equivalent: 18k * (18/21) = 21k equivalent
+    return grams * (18 / 21);
   }
 };
 

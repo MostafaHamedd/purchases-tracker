@@ -21,17 +21,25 @@ import { styles } from './purchaseDetailStyles';
 export default function PurchaseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { stores } = useStores();
+  const { stores, loading: storesLoading } = useStores();
   const [showAddPaymentDialog, setShowAddPaymentDialog] = useState(false);
   const [showEditPaymentDialog, setShowEditPaymentDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [paymentToEdit, setPaymentToEdit] = useState<any>(null);
   const [paymentToDelete, setPaymentToDelete] = useState<{ id: string; date: string } | null>(null);
   
-  const { purchase, payments, refreshPurchase } = usePurchaseDetail(id!);
+  const { purchase, payments, loading, error, refreshPurchase } = usePurchaseDetail(id!);
   
   // Find the store associated with this purchase
   const store = stores.find(s => s.id === purchase?.storeId);
+  
+  // Debug logging for store lookup
+  console.log('Purchase detail - stores loading:', storesLoading);
+  console.log('Purchase detail - stores count:', stores.length);
+  console.log('Purchase detail - stores:', stores.map(s => ({ id: s.id, code: s.code, name: s.name })));
+  console.log('Purchase detail - purchase storeId:', purchase?.storeId);
+  console.log('Purchase detail - found store:', store);
+  console.log('Purchase detail - store lookup result:', store ? `${store.code} (${store.name})` : 'NOT FOUND');
   
   // Format date to show month name and day
   const formatDate = (dateString: string) => {
@@ -40,6 +48,15 @@ export default function PurchaseDetailScreen() {
     const day = date.getDate();
     const year = date.getFullYear();
     return `${month} ${day}, ${year}`;
+  };
+
+  // Format payment date to be shorter and cleaner
+  const formatPaymentDate = (dateString: string) => {
+    if (!dateString) return 'No date';
+    const date = new Date(dateString);
+    const month = date.toLocaleDateString('en-US', { month: 'short' });
+    const day = date.getDate();
+    return `${month} ${day}`;
   };
 
   if (!purchase) {
@@ -71,13 +88,18 @@ export default function PurchaseDetailScreen() {
     }
   };
 
-  const confirmDeletePayment = () => {
+  const confirmDeletePayment = async () => {
     if (paymentToDelete) {
-      PaymentService.deletePayment(purchase.id, paymentToDelete.id);
+      const result = await PaymentService.deletePayment(purchase.id, paymentToDelete.id);
       setShowDeleteDialog(false);
       setPaymentToDelete(null);
-      refreshPurchase();
-      Alert.alert('Success', 'Payment deleted successfully!');
+      await refreshPurchase();
+      
+      if (result.success) {
+        Alert.alert('✅ Success', 'Payment has been deleted successfully!');
+      } else {
+        Alert.alert('❌ Error', result.error || 'Failed to delete payment. Please try again.');
+      }
     }
   };
 
@@ -131,14 +153,28 @@ export default function PurchaseDetailScreen() {
 
   // Calculate total grams from suppliers (21k equivalent)
   const calculateTotalGramsFromSuppliers = () => {
-    if (!purchase?.suppliers) return 0;
+    console.log('🔍 Purchase detail - calculating total grams from suppliers:');
+    console.log('- purchase:', purchase);
+    console.log('- purchase.suppliers:', purchase?.suppliers);
+    
+    if (!purchase?.suppliers) {
+      console.log('- No suppliers found, returning 0');
+      return 0;
+    }
+    
     let total = 0;
-    Object.values(purchase.suppliers).forEach(supplier => {
+    Object.entries(purchase.suppliers).forEach(([supplierCode, supplier]) => {
+      console.log(`- Supplier ${supplierCode}:`, supplier);
       if (supplier && typeof supplier === 'object') {
-        total += supplier.totalGrams21k || 0;
+        const grams = supplier.totalGrams21k || 0;
+        console.log(`  - totalGrams21k: ${grams}`);
+        total += grams;
       }
     });
-    return Math.round(total * 10) / 10; // Round to 1 decimal place
+    
+    const result = Math.round(total * 10) / 10; // Round to 1 decimal place
+    console.log(`- Total calculated: ${result}`);
+    return result;
   };
 
   const calculatedTotalGrams = calculateTotalGramsFromSuppliers();
@@ -157,8 +193,30 @@ export default function PurchaseDetailScreen() {
       {/* Purchase Header */}
       <View style={styles.purchaseHeader}>
         <Text style={styles.purchaseTitle}>Purchase #{purchase.id}</Text>
-        <Text style={styles.purchaseSubtitle}>{store?.code || 'Unknown Store'} • {formatDate(purchase.date)}</Text>
+        <Text style={styles.purchaseSubtitle}>
+          {storesLoading ? 'Loading...' : (store?.code || `Store ${purchase.storeId}`)} • {formatDate(purchase.date)}
+        </Text>
       </View>
+
+      {/* Loading State */}
+      {loading && (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading purchase details...</Text>
+        </View>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>❌ {error}</Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={refreshPurchase}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Purchase Information Card */}
@@ -220,7 +278,10 @@ export default function PurchaseDetailScreen() {
               {payments.map((payment) => (
                 <PaymentCard
                   key={payment.id}
-                  payment={payment}
+                  payment={{
+                    ...payment,
+                    date: formatPaymentDate(payment.date)
+                  }}
                   onEdit={() => handleEditPayment(payment)}
                   onDelete={() => handleDeletePayment(payment.id)}
                 />
@@ -238,11 +299,16 @@ export default function PurchaseDetailScreen() {
       <AddPaymentDialog
         visible={showAddPaymentDialog}
         onClose={() => setShowAddPaymentDialog(false)}
-        onSubmit={(paymentData) => {
-          PaymentService.addPayment(purchase.id, paymentData);
+        onSubmit={async (paymentData) => {
+          const result = await PaymentService.addPayment(purchase.id, paymentData);
           setShowAddPaymentDialog(false);
-          refreshPurchase();
-          Alert.alert('Success', 'Payment added successfully!');
+          await refreshPurchase();
+          
+          if (result.success) {
+            Alert.alert('✅ Success', 'Payment has been added successfully!');
+          } else {
+            Alert.alert('❌ Error', result.error || 'Failed to add payment. Please try again.');
+          }
         }}
         purchaseId={purchase.id}
         purchase={{

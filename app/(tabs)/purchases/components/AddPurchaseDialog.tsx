@@ -1,4 +1,5 @@
 import { AddPurchaseDialogProps } from '@/data/types';
+import { convertTo21kEquivalent } from '@/data/utils';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -19,7 +20,7 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
       'EG21': { grams: 0, fees: 0, discountRate: 23 }
     } as Record<string, { grams: number; fees: number; discountRate: number }>,
     supplierReceipts: {} as Record<string, string[]>,
-    receiptData: {} as Record<string, { grams: number; fees: number }>
+    receiptData: {} as Record<string, { grams: number; fees: number; karatType: '18' | '21' }>
   });
 
   const toggleSupplier = (supplier: string) => {
@@ -32,8 +33,8 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
         ? { ...prev.supplierReceipts, [supplier]: [] }
         : { ...prev.supplierReceipts, [supplier]: [supplier] },
       receiptData: prev.selectedSuppliers.includes(supplier)
-        ? { ...prev.receiptData, [supplier]: { grams: 0, fees: 0 } }
-        : { ...prev.receiptData, [supplier]: { grams: 0, fees: 0 } }
+        ? { ...prev.receiptData, [supplier]: { grams: 0, fees: 0, karatType: supplier.includes('18') ? '18' : '21' } }
+        : { ...prev.receiptData, [supplier]: { grams: 0, fees: 0, karatType: supplier.includes('18') ? '18' : '21' } }
     }));
   };
 
@@ -51,7 +52,7 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
         },
         receiptData: {
           ...prev.receiptData,
-          [newReceiptId]: { grams: 0, fees: 0 }
+          [newReceiptId]: { grams: 0, fees: 0, karatType: supplier.includes('18') ? '18' : '21' }
         }
       };
     });
@@ -105,15 +106,16 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
     }));
   };
 
-  // Calculate total grams from all receipt entries
+  // Calculate total grams from all receipt entries (converted to 21k equivalent)
   const calculateTotalGrams = () => {
     const allReceipts = formData.selectedSuppliers.flatMap(supplier => 
       formData.supplierReceipts[supplier] || [supplier]
     );
     
     return allReceipts.reduce((sum, receiptId) => {
-      const data = formData.receiptData[receiptId] || { grams: 0, fees: 0 };
-      return sum + data.grams;
+      const data = formData.receiptData[receiptId] || { grams: 0, fees: 0, karatType: '21' };
+      const grams21kEquivalent = convertTo21kEquivalent(data.grams, data.karatType);
+      return sum + grams21kEquivalent;
     }, 0);
   };
 
@@ -141,7 +143,7 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
     );
     
     const hasValidData = allReceipts.every(receiptId => {
-      const data = formData.receiptData[receiptId] || { grams: 0, fees: 0 };
+      const data = formData.receiptData[receiptId] || { grams: 0, fees: 0, karatType: '21' };
       return data.grams > 0 && data.fees > 0;
     });
 
@@ -150,17 +152,29 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
       return;
     }
 
-    // Calculate supplier totals from receipt data
+    // Calculate supplier totals from receipt data (converted to 21k equivalent)
     const selectedSuppliersData = formData.selectedSuppliers.reduce((acc, supplier) => {
       const supplierReceipts = formData.supplierReceipts[supplier] || [supplier];
-      const supplierTotalGrams = supplierReceipts.reduce((sum, receiptId) => {
-        const data = formData.receiptData[receiptId] || { grams: 0, fees: 0 };
-        return sum + data.grams;
-      }, 0);
+      
+      // Calculate 18k and 21k grams separately, then convert to 21k equivalent
+      let grams18k = 0;
+      let grams21k = 0;
+      
+      supplierReceipts.forEach(receiptId => {
+        const data = formData.receiptData[receiptId] || { grams: 0, fees: 0, karatType: '21' };
+        if (data.karatType === '18') {
+          grams18k += data.grams;
+        } else {
+          grams21k += data.grams;
+        }
+      });
+      
+      const totalGrams21kEquivalent = convertTo21kEquivalent(grams18k, '18') + convertTo21kEquivalent(grams21k, '21');
+      
       acc[supplier] = {
-        grams18k: 0, // This would need to be calculated based on actual supplier data
-        grams21k: supplierTotalGrams,
-        totalGrams21k: supplierTotalGrams
+        grams18k: grams18k,
+        grams21k: grams21k,
+        totalGrams21k: totalGrams21kEquivalent
       };
       return acc;
     }, {} as Record<string, { grams18k: number; grams21k: number; totalGrams21k: number }>);
@@ -187,8 +201,9 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
     );
     
     return allReceipts.reduce((sum, receiptId) => {
-      const data = formData.receiptData[receiptId] || { grams: 0, fees: 0 };
-      return sum + data.grams;
+      const data = formData.receiptData[receiptId] || { grams: 0, fees: 0, karatType: '21' };
+      const grams21kEquivalent = convertTo21kEquivalent(data.grams, data.karatType);
+      return sum + grams21kEquivalent;
     }, 0);
   };
 
@@ -209,12 +224,13 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
     );
     
     return allReceipts.reduce((sum, receiptId) => {
-      const data = formData.receiptData[receiptId] || { grams: 0, fees: 0 };
+      const data = formData.receiptData[receiptId] || { grams: 0, fees: 0, karatType: '21' };
       const supplier = formData.selectedSuppliers.find(s => 
         formData.supplierReceipts[s]?.includes(receiptId) || s === receiptId
       );
       const supplierData = supplier ? formData.suppliers[supplier] : { discountRate: 0 };
-      return sum + (data.grams * supplierData.discountRate);
+      const grams21kEquivalent = convertTo21kEquivalent(data.grams, data.karatType);
+      return sum + (grams21kEquivalent * supplierData.discountRate);
     }, 0);
   };
 
@@ -245,14 +261,14 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
                   ]}
                   onPress={() => {
                     setSelectedStoreId(store.id);
-                    setFormData(prev => ({ ...prev, store: store.name }));
+                    setFormData(prev => ({ ...prev, store: store.code }));
                   }}
                 >
                   <Text style={[
                     styles.storeButtonText,
                     selectedStoreId === store.id && styles.selectedStoreButtonText
                   ]}>
-                    {store.name}
+                    {store.code}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -364,15 +380,24 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
                   </View>
                   
                   {receipts.map((receiptId, index) => {
-                    const receiptData = formData.receiptData[receiptId] || { grams: 0, fees: 0 };
-                    const discount = receiptData.grams * (supplierData?.discountRate || 0);
+                    const receiptData = formData.receiptData[receiptId] || { grams: 0, fees: 0, karatType: '21' };
+                    const grams21kEquivalent = convertTo21kEquivalent(receiptData.grams, receiptData.karatType);
+                    const discount = grams21kEquivalent * (supplierData?.discountRate || 0);
                     
                     return (
                       <View key={receiptId} style={styles.receiptCard}>
                         <View style={styles.receiptHeader}>
-                          <Text style={styles.receiptTitle}>
-                            {receiptId === supplier ? 'Receipt 1' : `Receipt ${index + 1}`}
-                          </Text>
+                          <View>
+                            <Text style={styles.receiptTitle}>
+                              {receiptId === supplier ? 'Receipt 1' : `Receipt ${index + 1}`}
+                            </Text>
+                            <Text style={styles.karatTypeText}>
+                              {receiptData.karatType}k Gold
+                              {receiptData.karatType === '18' && (
+                                <Text style={styles.equivalentText}> (≈{grams21kEquivalent.toFixed(1)}g 21k)</Text>
+                              )}
+                            </Text>
+                          </View>
                           {receiptId !== supplier && receipts.length > 1 && (
                             <TouchableOpacity 
                               style={styles.removeButton}
@@ -681,6 +706,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#374151',
+  },
+  karatTypeText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  equivalentText: {
+    fontSize: 11,
+    color: '#059669',
+    fontStyle: 'italic',
   },
   removeButton: {
     backgroundColor: '#EF4444',

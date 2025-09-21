@@ -16,7 +16,11 @@ import { AddPurchaseDialog } from './components/AddPurchaseDialog';
 import { PurchaseCard } from './components/PurchaseCard';
 
 export default function PurchasesScreen() {
-  const { stores } = useStores();
+  const { stores, loading: storesLoading } = useStores();
+  
+  // Debug logging for stores
+  console.log('Purchases screen - stores loading:', storesLoading);
+  console.log('Purchases screen - stores:', stores);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStore, setSelectedStore] = useState<string>('All');
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -28,9 +32,31 @@ export default function PurchasesScreen() {
     searchQuery: searchQuery || undefined,
   }), [selectedStore, searchQuery]);
 
-  const purchases = useMemo(() => {
-    return PurchaseService.filterPurchases(filters);
-  }, [filters, refreshKey]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [purchasesLoading, setPurchasesLoading] = useState(true);
+
+  // Fetch purchases from API
+  useEffect(() => {
+    const fetchPurchases = async () => {
+      try {
+        setPurchasesLoading(true);
+        const filteredPurchases = await PurchaseService.filterPurchases(filters);
+        console.log('Purchases filter debug:');
+        console.log('- selectedStore:', selectedStore);
+        console.log('- filters:', filters);
+        console.log('- filtered purchases count:', filteredPurchases.length);
+        console.log('- stores:', stores.map(s => ({ id: s.id, code: s.code })));
+        setPurchases(filteredPurchases);
+      } catch (error) {
+        console.error('Error fetching purchases:', error);
+        setPurchases([]);
+      } finally {
+        setPurchasesLoading(false);
+      }
+    };
+
+    fetchPurchases();
+  }, [filters, refreshKey, selectedStore, stores]);
 
   // Listen for refresh events
   useEffect(() => {
@@ -49,12 +75,16 @@ export default function PurchasesScreen() {
     };
   }, []);
 
-  const handleAddPurchase = (purchaseData: any) => {
+  const handleAddPurchase = async (purchaseData: any) => {
     try {
-      PurchaseService.createPurchase(purchaseData);
-      setShowAddDialog(false);
-      setRefreshKey(prev => prev + 1);
-      Alert.alert('Success', 'Purchase created successfully!');
+      const result = await PurchaseService.createPurchase(purchaseData);
+      if (result.success) {
+        setShowAddDialog(false);
+        setRefreshKey(prev => prev + 1);
+        Alert.alert('Success', 'Purchase created successfully!');
+      } else {
+        Alert.alert('Error', result.error || 'Failed to create purchase. Please try again.');
+      }
     } catch (error) {
       Alert.alert('Error', 'Failed to create purchase. Please try again.');
     }
@@ -139,13 +169,19 @@ export default function PurchasesScreen() {
 
       {/* Purchases List */}
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {purchases.map((purchase) => (
-          <PurchaseCard
-            key={purchase.id}
-            purchase={purchase}
-            onRefresh={() => setRefreshKey(prev => prev + 1)}
-          />
-        ))}
+        {purchasesLoading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading purchases...</Text>
+          </View>
+        ) : (
+          purchases.map((purchase) => (
+            <PurchaseCard
+              key={purchase.id}
+              purchase={purchase}
+              onRefresh={() => setRefreshKey(prev => prev + 1)}
+            />
+          ))
+        )}
         
         {purchases.length === 0 && (
           <View style={styles.emptyState}>

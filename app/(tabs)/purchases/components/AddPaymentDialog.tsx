@@ -5,43 +5,78 @@ import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity
 
 export function AddPaymentDialog({ visible, onClose, onSubmit, purchase }: AddPaymentDialogProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [formData, setFormData] = useState({
     feesPaid: '',
     gramsPaid: '',
     date: new Date(),
-    notes: ''
+    note: '' // Changed from 'notes' to 'note' to match PaymentFormData interface
   });
 
-  const handleSubmit = () => {
-    if (!formData.feesPaid && !formData.gramsPaid) {
-      Alert.alert('Error', 'Please enter either fees or grams paid');
-      return;
+  // Validation function
+  const validateForm = () => {
+    const errors: {[key: string]: string} = {};
+    const feesPaid = parseFloat(formData.feesPaid) || 0;
+    const gramsPaid = parseFloat(formData.gramsPaid) || 0;
+    
+    // Check if at least one payment type is entered
+    if (feesPaid === 0 && gramsPaid === 0) {
+      errors.payment = 'Please enter either fees paid or grams paid (or both).';
+    }
+    
+    // Validate fees paid is a valid number
+    if (formData.feesPaid && (isNaN(feesPaid) || feesPaid < 0)) {
+      errors.feesPaid = 'Please enter a valid amount for fees paid.';
+    }
+    
+    // Validate grams paid is a valid number
+    if (formData.gramsPaid && (isNaN(gramsPaid) || gramsPaid < 0)) {
+      errors.gramsPaid = 'Please enter a valid amount for grams paid.';
     }
 
     // Validate grams payment doesn't exceed total grams due
-    if (purchase && formData.gramsPaid) {
-      const gramsPaid = parseFloat(formData.gramsPaid) || 0;
-      if (gramsPaid > purchase.totalGrams) {
-        Alert.alert('Validation Error', `Cannot pay more grams (${gramsPaid}g) than total due (${purchase.totalGrams}g)`);
-        return;
-      }
+    if (purchase && gramsPaid > 0 && gramsPaid > purchase.totalGrams) {
+      errors.gramsPaid = `Cannot pay more grams (${gramsPaid}g) than total due (${purchase.totalGrams}g).`;
+    }
+    
+    // Validate date is selected
+    if (!formData.date) {
+      errors.date = 'Please select a payment date.';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = () => {
+    // Clear previous validation errors
+    setValidationErrors({});
+    
+    // Validate form
+    if (!validateForm()) {
+      const firstError = Object.values(validationErrors)[0];
+      Alert.alert('❌ Validation Error', firstError);
+      return;
     }
 
     const paymentData = {
       id: Date.now().toString(),
       feesPaid: parseFloat(formData.feesPaid) || 0,
       gramsPaid: parseFloat(formData.gramsPaid) || 0,
-      date: formData.date.toISOString().split('T')[0],
+      date: formData.date.toISOString().split('T')[0], // Format: YYYY-MM-DD
       karatType: '21' as const, // Default to 21k for now
-      notes: formData.notes
+      note: formData.note || '' // Ensure note is always a string, not undefined
     };
+
+    console.log('💳 AddPaymentDialog paymentData:', paymentData);
+    console.log('💳 Form data:', formData);
 
     onSubmit(paymentData);
     setFormData({
       feesPaid: '',
       gramsPaid: '',
       date: new Date(),
-      notes: ''
+      note: '' // Changed from 'notes' to 'note'
     });
   };
 
@@ -73,7 +108,7 @@ export function AddPaymentDialog({ visible, onClose, onSubmit, purchase }: AddPa
               </View>
             )}
 
-            <Text style={styles.sectionTitle}>Select Payment Date</Text>
+            <Text style={styles.sectionTitle}>Select Payment Date *</Text>
             <TouchableOpacity 
               style={styles.datePickerButton}
               onPress={() => setShowDatePicker(!showDatePicker)}
@@ -109,15 +144,28 @@ export function AddPaymentDialog({ visible, onClose, onSubmit, purchase }: AddPa
               </View>
             )}
 
-            <Text style={styles.sectionTitle}>Fees Paid (EGP)</Text>
+            <Text style={styles.sectionTitle}>Fees Paid (EGP) *</Text>
             <TextInput
-              style={[styles.totalGramsInput, { fontSize: 14 }]}
+              style={[
+                styles.totalGramsInput, 
+                { fontSize: 14 },
+                validationErrors.feesPaid && styles.errorInput
+              ]}
               value={formData.feesPaid}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, feesPaid: text }))}
+              onChangeText={(text) => {
+                setFormData(prev => ({ ...prev, feesPaid: text }));
+                // Clear validation error when user starts typing
+                if (validationErrors.feesPaid) {
+                  setValidationErrors(prev => ({ ...prev, feesPaid: '' }));
+                }
+              }}
               placeholder="Enter the amount paid in EGP (e.g., 5000)"
               placeholderTextColor="#6B7280"
               keyboardType="numeric"
             />
+            {validationErrors.feesPaid && (
+              <Text style={styles.errorText}>{validationErrors.feesPaid}</Text>
+            )}
             {formData.feesPaid && (
               <View style={styles.paymentHint}>
                 <Text style={styles.hintText}>
@@ -126,19 +174,39 @@ export function AddPaymentDialog({ visible, onClose, onSubmit, purchase }: AddPa
               </View>
             )}
 
-            <Text style={styles.sectionTitle}>Grams Paid</Text>
+            <Text style={styles.sectionTitle}>Grams Paid *</Text>
             <TextInput
-              style={[styles.totalGramsInput, { fontSize: 14 }]}
+              style={[
+                styles.totalGramsInput, 
+                { fontSize: 14 },
+                validationErrors.gramsPaid && styles.errorInput
+              ]}
               value={formData.gramsPaid}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, gramsPaid: text }))}
+              onChangeText={(text) => {
+                setFormData(prev => ({ ...prev, gramsPaid: text }));
+                // Clear validation error when user starts typing
+                if (validationErrors.gramsPaid) {
+                  setValidationErrors(prev => ({ ...prev, gramsPaid: '' }));
+                }
+              }}
               placeholder="Enter the weight of gold paid in grams (e.g., 100)"
               placeholderTextColor="#6B7280"
               keyboardType="numeric"
             />
+            {validationErrors.gramsPaid && (
+              <Text style={styles.errorText}>{validationErrors.gramsPaid}</Text>
+            )}
             {purchase && (
               <Text style={styles.validationHint}>
                 Max: {purchase.totalGrams}g (cannot exceed total due)
               </Text>
+            )}
+            
+            {/* General payment validation error */}
+            {validationErrors.payment && (
+              <View style={styles.generalErrorContainer}>
+                <Text style={styles.errorText}>{validationErrors.payment}</Text>
+              </View>
             )}
             {formData.gramsPaid && (
               <View style={styles.paymentHint}>
@@ -154,8 +222,8 @@ export function AddPaymentDialog({ visible, onClose, onSubmit, purchase }: AddPa
             <Text style={styles.sectionTitle}>Note (Optional)</Text>
             <TextInput
               style={[styles.totalGramsInput, styles.notesInput, { fontSize: 14 }]}
-              value={formData.notes}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, notes: text }))}
+              value={formData.note}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, note: text }))}
               placeholder="Add payment details or reference..."
               placeholderTextColor="#6B7280"
               multiline
@@ -351,6 +419,21 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#EF4444',
     fontWeight: '600',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  errorInput: {
+    borderColor: '#EF4444',
+    borderWidth: 1,
+  },
+  generalErrorContainer: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    marginBottom: 8,
   },
   buttons: {
     flexDirection: 'row',

@@ -6,10 +6,23 @@ import { useStores } from '../../stores/hooks/useStores';
 
 export function PurchaseCard({ purchase, onRefresh }: PurchaseCardProps) {
   const router = useRouter();
-  const { stores } = useStores();
+  const { stores, loading: storesLoading } = useStores();
   
   // Find the store associated with this purchase
   const store = stores.find(s => s.id === purchase.storeId);
+  
+  // Debug logging for store lookup
+  console.log('🛒 PurchaseCard debug:');
+  console.log('  - stores loading:', storesLoading);
+  console.log('  - stores count:', stores.length);
+  console.log('  - stores:', stores.map(s => ({ id: s.id, code: s.code, name: s.name })));
+  console.log('  - purchase storeId:', purchase.storeId);
+  console.log('  - found store:', store);
+  console.log('  - store lookup result:', store ? `${store.code} (${store.name})` : 'NOT FOUND');
+  
+  // Temporary: Show what we're actually displaying
+  const displayText = storesLoading ? 'Loading...' : (store?.code || `Store ${purchase.storeId}`);
+  console.log('  - DISPLAY TEXT:', displayText);
 
   const handlePress = () => {
     router.push(`/purchases/${purchase.id}`);
@@ -49,8 +62,27 @@ export function PurchaseCard({ purchase, onRefresh }: PurchaseCardProps) {
   };
 
   const daysLeft = getDaysLeft(purchase.dueDate);
-  const remainingGrams = purchase.totalGrams - purchase.payments.gramsPaid;
-  const remainingFees = purchase.totalFees - purchase.payments.feesPaid;
+  
+  // Debug logging to identify NaN issues
+  console.log('🛒 PurchaseCard debug for purchase', purchase.id, ':');
+  console.log('- Full purchase object:', purchase);
+  console.log('- purchase.totalGrams:', purchase.totalGrams, typeof purchase.totalGrams);
+  console.log('- purchase.payments.gramsPaid:', purchase.payments.gramsPaid, typeof purchase.payments.gramsPaid);
+  console.log('- purchase.totalFees:', purchase.totalFees, typeof purchase.totalFees);
+  console.log('- purchase.payments.feesPaid:', purchase.payments.feesPaid, typeof purchase.payments.feesPaid);
+  console.log('- purchase.suppliers:', purchase.suppliers);
+  
+  // Ensure we have valid numbers, default to 0 if NaN or undefined
+  const totalGrams = Number(purchase.totalGrams) || 0;
+  const gramsPaid = Number(purchase.payments.gramsPaid) || 0;
+  const totalFees = Number(purchase.totalFees) || 0;
+  const feesPaid = Number(purchase.payments.feesPaid) || 0;
+  
+  const remainingGrams = totalGrams - gramsPaid;
+  const remainingFees = totalFees - feesPaid;
+  
+  console.log('- calculated remainingGrams:', remainingGrams);
+  console.log('- calculated remainingFees:', remainingFees);
 
   // Format date to show month name and day
   const formatDate = (dateString: string) => {
@@ -84,7 +116,9 @@ export function PurchaseCard({ purchase, onRefresh }: PurchaseCardProps) {
 
       <View style={styles.storeSection}>
         <Text style={styles.storeIcon}>📍</Text>
-        <Text style={styles.storeName}>{store?.code || 'Unknown Store'}</Text>
+        <Text style={styles.storeName}>
+          {storesLoading ? 'Loading...' : (store?.code || `Store ${purchase.storeId}`)}
+        </Text>
       </View>
 
       <View style={styles.progressBarContainer}>

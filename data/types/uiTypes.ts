@@ -127,7 +127,7 @@ export interface PaymentFormData {
   gramsPaid: number;
   date: string;
   karatType: KaratType;
-  notes: string;
+  note: string; // Changed from 'notes' to 'note' to match Payment interface
 }
 
 export interface StoreFormData {

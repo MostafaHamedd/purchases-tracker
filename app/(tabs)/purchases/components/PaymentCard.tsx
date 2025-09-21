@@ -3,10 +3,20 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export function PaymentCard({ payment, onEdit, onDelete }: PaymentCardProps) {
+  // Validate payment data and provide defaults
+  const safePayment = {
+    id: payment.id || 'unknown',
+    date: payment.date || 'No date',
+    gramsPaid: payment.gramsPaid || 0,
+    feesPaid: payment.feesPaid || 0,
+    karatType: payment.karatType || '21',
+    note: payment.note || undefined,
+  };
+  
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.date}>{payment.date}</Text>
+        <Text style={styles.date}>{safePayment.date}</Text>
         <View style={styles.actions}>
           <TouchableOpacity style={styles.actionButton} onPress={onEdit}>
             <Text style={styles.actionText}>Edit</Text>
@@ -20,16 +30,16 @@ export function PaymentCard({ payment, onEdit, onDelete }: PaymentCardProps) {
       <View style={styles.content}>
         <View style={styles.amountRow}>
           <Text style={styles.amountLabel}>Grams Paid:</Text>
-          <Text style={styles.amountValue}>{payment.gramsPaid}g</Text>
+          <Text style={styles.amountValue}>{safePayment.gramsPaid}g</Text>
         </View>
         <View style={styles.amountRow}>
           <Text style={styles.amountLabel}>Fees Paid:</Text>
-          <Text style={styles.amountValue}>EGP {payment.feesPaid.toLocaleString()}</Text>
+          <Text style={styles.amountValue}>EGP {safePayment.feesPaid.toLocaleString()}</Text>
         </View>
-        {payment.note && (
+        {safePayment.note && (
           <View style={styles.noteContainer}>
             <Text style={styles.noteLabel}>Note:</Text>
-            <Text style={styles.noteText}>{payment.note}</Text>
+            <Text style={styles.noteText}>{safePayment.note}</Text>
           </View>
         )}
       </View>

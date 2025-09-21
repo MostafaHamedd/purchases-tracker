@@ -32,7 +32,8 @@ export function EditSupplierDialog({
       setCode(supplier.code);
       // Default to 18k karat type and use its discount tiers
       setKaratType('18');
-      setTiers([...(supplier.karat18?.discountTiers || [])]);
+      const initialTiers = supplier.karat18?.discountTiers || [];
+      setTiers(Array.isArray(initialTiers) ? [...initialTiers] : []);
     }
   }, [supplier]);
 
@@ -41,9 +42,11 @@ export function EditSupplierDialog({
     setKaratType(newKaratType);
     if (supplier) {
       if (newKaratType === '18') {
-        setTiers([...(supplier.karat18?.discountTiers || [])]);
+        const tiers18k = supplier.karat18?.discountTiers || [];
+        setTiers(Array.isArray(tiers18k) ? [...tiers18k] : []);
       } else {
-        setTiers([...(supplier.karat21?.discountTiers || [])]);
+        const tiers21k = supplier.karat21?.discountTiers || [];
+        setTiers(Array.isArray(tiers21k) ? [...tiers21k] : []);
       }
     }
   };
@@ -249,11 +252,11 @@ export function EditSupplierDialog({
               </Text>
               
               <View style={styles.tiersContainer}>
-                {tiers.map((tier, index) => (
+                {tiers && tiers.filter(tier => tier && tier.id).map((tier, index) => (
                   <View key={tier.id} style={styles.tierInputCard}>
                     <View style={styles.tierHeader}>
                       <View style={styles.tierTitleContainer}>
-                        <Text style={styles.tierNumber}>Tier {index + 1}</Text>
+                        <Text style={styles.tierNumber}>Tier {String(index + 1)}</Text>
                         {tier.isProtected && (
                           <Text style={styles.protectedBadge}>Main Tier</Text>
                         )}
@@ -273,7 +276,7 @@ export function EditSupplierDialog({
                         <Text style={styles.tierInputLabel}>Name</Text>
                         <TextInput
                           style={styles.tierTextInput}
-                          value={tier.name}
+                          value={tier.name || ''}
                           onChangeText={(value) => updateTier(tier.id, 'name', value)}
                           placeholder="e.g., Basic, Premium"
                           placeholderTextColor="#9CA3AF"
@@ -284,7 +287,7 @@ export function EditSupplierDialog({
                         <Text style={styles.tierInputLabel}>Threshold (g)</Text>
                         <TextInput
                           style={styles.tierTextInput}
-                          value={tier.threshold.toString()}
+                          value={tier.threshold ? tier.threshold.toString() : '0'}
                           onChangeText={(value) => updateTier(tier.id, 'threshold', parseInt(value) || 0)}
                           placeholder="0"
                           keyboardType="numeric"
@@ -296,7 +299,7 @@ export function EditSupplierDialog({
                         <Text style={styles.tierInputLabel}>Discount (%)</Text>
                         <TextInput
                           style={styles.tierTextInput}
-                          value={tier.discountPercentage.toString()}
+                          value={tier.discountPercentage ? tier.discountPercentage.toString() : '0'}
                           onChangeText={(value) => updateTier(tier.id, 'discountPercentage', parseFloat(value) || 0)}
                           placeholder="0"
                           keyboardType="numeric"

@@ -150,4 +150,13 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9CA3AF',
   },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
 });

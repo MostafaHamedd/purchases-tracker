@@ -1,0 +1,195 @@
+{
+  "purchases": [
+    {
+      "id": "1",
+      "date": "2025-09-05",
+      "store_id": "1",
+      "status": "Pending",
+      "total_grams": 300,
+      "total_fees": -5200,
+      "total_discount": 6700,
+      "due_date": "2025-10-05",
+      "created_at": "2025-09-05T10:00:00Z",
+      "updated_at": "2025-09-05T10:00:00Z"
+    },
+    {
+      "id": "2", 
+      "date": "2025-09-08",
+      "store_id": "2",
+      "status": "Partial",
+      "total_grams": 400,
+      "total_fees": -6900,
+      "total_discount": 8900,
+      "due_date": "2025-10-08",
+      "created_at": "2025-09-08T10:00:00Z",
+      "updated_at": "2025-09-08T10:00:00Z"
+    },
+    {
+      "id": "3",
+      "date": "2025-09-12", 
+      "store_id": "1",
+      "status": "Paid",
+      "total_grams": 500,
+      "total_fees": -8600,
+      "total_discount": 11100,
+      "due_date": "2025-10-12",
+      "created_at": "2025-09-12T10:00:00Z",
+      "updated_at": "2025-09-12T10:00:00Z"
+    },
+    {
+      "id": "4",
+      "date": "2025-08-15",
+      "store_id": "2", 
+      "status": "Overdue",
+      "total_grams": 300,
+      "total_fees": 1500,
+      "total_discount": 0,
+      "due_date": "2025-09-15",
+      "created_at": "2025-08-15T10:00:00Z",
+      "updated_at": "2025-08-15T10:00:00Z"
+    },
+    {
+      "id": "5",
+      "date": "2025-08-20",
+      "store_id": "1",
+      "status": "Pending", 
+      "total_grams": 200,
+      "total_fees": 1000,
+      "total_discount": 0,
+      "due_date": "2025-09-20",
+      "created_at": "2025-08-20T10:00:00Z",
+      "updated_at": "2025-08-20T10:00:00Z"
+    },
+    {
+      "id": "6",
+      "date": "2025-08-24",
+      "store_id": "2",
+      "status": "Partial",
+      "total_grams": 250,
+      "total_fees": 1250,
+      "total_discount": 0,
+      "due_date": "2025-09-24",
+      "created_at": "2025-08-24T10:00:00Z",
+      "updated_at": "2025-08-24T10:00:00Z"
+    }
+  ],
+  "purchase_suppliers": [
+    {
+      "id": "ps1",
+      "purchase_id": "1",
+      "supplier_code": "EGS",
+      "grams_18k": 100,
+      "grams_21k": 100,
+      "total_grams_21k_equivalent": 185.7
+    },
+    {
+      "id": "ps2", 
+      "purchase_id": "1",
+      "supplier_code": "PGS",
+      "grams_18k": 50,
+      "grams_21k": 50,
+      "total_grams_21k_equivalent": 92.9
+    },
+    {
+      "id": "ps3",
+      "purchase_id": "1", 
+      "supplier_code": "SGS",
+      "grams_18k": 0,
+      "grams_21k": 100,
+      "total_grams_21k_equivalent": 100
+    },
+    {
+      "id": "ps4",
+      "purchase_id": "2",
+      "supplier_code": "EGS", 
+      "grams_18k": 150,
+      "grams_21k": 100,
+      "total_grams_21k_equivalent": 228.6
+    },
+    {
+      "id": "ps5",
+      "purchase_id": "2",
+      "supplier_code": "PGS",
+      "grams_18k": 0,
+      "grams_21k": 150,
+      "total_grams_21k_equivalent": 150
+    },
+    {
+      "id": "ps6",
+      "purchase_id": "3",
+      "supplier_code": "EGS",
+      "grams_18k": 200,
+      "grams_21k": 100,
+      "total_grams_21k_equivalent": 271.4
+    },
+    {
+      "id": "ps7",
+      "purchase_id": "3",
+      "supplier_code": "PGS",
+      "grams_18k": 0,
+      "grams_21k": 200,
+      "total_grams_21k_equivalent": 200
+    },
+    {
+      "id": "ps8",
+      "purchase_id": "4",
+      "supplier_code": "EGS",
+      "grams_18k": 100,
+      "grams_21k": 100,
+      "total_grams_21k_equivalent": 185.7
+    },
+    {
+      "id": "ps9",
+      "purchase_id": "4",
+      "supplier_code": "SGS",
+      "grams_18k": 0,
+      "grams_21k": 100,
+      "total_grams_21k_equivalent": 100
+    },
+    {
+      "id": "ps10",
+      "purchase_id": "5",
+      "supplier_code": "EGS",
+      "grams_18k": 50,
+      "grams_21k": 50,
+      "total_grams_21k_equivalent": 92.9
+    },
+    {
+      "id": "ps11",
+      "purchase_id": "5",
+      "supplier_code": "SGS",
+      "grams_18k": 0,
+      "grams_21k": 100,
+      "total_grams_21k_equivalent": 100
+    },
+    {
+      "id": "ps12",
+      "purchase_id": "6",
+      "supplier_code": "EGS",
+      "grams_18k": 100,
+      "grams_21k": 50,
+      "total_grams_21k_equivalent": 135.7
+    },
+    {
+      "id": "ps13",
+      "purchase_id": "6",
+      "supplier_code": "SGS",
+      "grams_18k": 0,
+      "grams_21k": 100,
+      "total_grams_21k_equivalent": 100
+    }
+  ],
+  "payments": [
+    {
+      "id": "pay1",
+      "purchase_id": "1",
+      "date": "2025-01-10",
+      "grams_paid": 0,
+      "fees_paid": 0,
+      "karat_type": "21",
+      "note": "Initial payment",
+      "created_at": "2025-01-10T10:00:00Z",
+      "updated_at": "2025-01-10T10:00:00Z"
+    }
+  ]
+}

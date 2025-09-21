@@ -227,16 +227,39 @@ export const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#9CA3AF',
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  loadingContainer: {
     paddingHorizontal: 24,
+    paddingVertical: 16,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  errorContainer: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    backgroundColor: '#FEF2F2',
+    alignItems: 'center',
   },
   errorText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '500',
     color: '#EF4444',
-    marginBottom: 16,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
