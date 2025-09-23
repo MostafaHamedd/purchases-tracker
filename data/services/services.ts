@@ -1,20 +1,26 @@
-import { calculateDueDate, calculatePurchaseFees, generatePurchaseId, getMockPurchases, setMockPurchases } from '../business';
+import { calculateDueDate, calculatePurchaseFees } from '../business';
 import { CreatePurchaseRequest, MonthlyTrends, Payment, PaymentTotals, PaymentValidation, Purchase, PurchaseFilters, PurchaseStats, RemainingAmounts } from '../types';
-import { calculateStatus, convertTo21kEquivalent, getDaysLeft } from '../utils';
+import { convertTo21kEquivalent, getDaysLeft } from '../utils';
 import { ApiPayment, CreatePaymentData, paymentsApiService } from './paymentsApiService';
 import { ApiPurchase, CreatePurchaseData, purchasesApiService } from './purchasesApiService';
-import { RecalculationService } from './recalculationService';
 import { emitPaymentAdded, emitPaymentDeleted } from './refreshEvents';
 
+// Utility function for consistent grams rounding
+const roundGrams = (grams: number): number => {
+  return Math.round(grams * 10) / 10; // Round to 1 decimal place
+};
+
 // Convert API payment to app payment format
-const convertApiPaymentToAppPayment = (apiPayment: ApiPayment): Payment => ({
-  id: apiPayment.id,
-  date: apiPayment.date,
-  gramsPaid: Number(apiPayment.grams_paid) || 0, // Convert string to number
-  feesPaid: Number(apiPayment.fees_paid) || 0,   // Convert string to number
-  karatType: apiPayment.karat_type,
-  note: apiPayment.note,
-});
+const convertApiPaymentToAppPayment = (apiPayment: ApiPayment): Payment => {
+  return {
+    id: apiPayment.id,
+    date: apiPayment.date,
+    gramsPaid: roundGrams(Number(apiPayment.grams_paid) || 0), // Convert string to number and round
+    feesPaid: Number(apiPayment.fees_paid) || 0,   // Convert string to number
+    karatType: apiPayment.karat_type,
+    note: apiPayment.note,
+  };
+};
 
 // Convert app payment to API payment format
 const convertAppPaymentToApiPayment = (appPayment: Payment): CreatePaymentData => ({
@@ -28,21 +34,14 @@ const convertAppPaymentToApiPayment = (appPayment: Payment): CreatePaymentData =
 
 // Convert API purchase to app purchase format
 const convertApiPurchaseToAppPurchase = (apiPurchase: ApiPurchase): Purchase => {
-  console.log('Converting API purchase to app format:', {
-    id: apiPurchase.id,
-    total_grams: apiPurchase.total_grams,
-    total_fees: apiPurchase.total_fees,
-    total_discount: apiPurchase.total_discount,
-  });
-  
   return {
     id: apiPurchase.id,
     date: apiPurchase.date,
     storeId: apiPurchase.store_id,
     status: apiPurchase.status,
-    totalGrams: Number(apiPurchase.total_grams) || 0, // Convert string to number
-    totalFees: Number(apiPurchase.total_fees) || 0,   // Convert string to number
-    totalDiscount: Number(apiPurchase.total_discount) || 0, // Convert string to number
+    totalGrams: roundGrams(Number(apiPurchase.total_grams_21k_equivalent) || 0), // Convert string to number and round
+    totalFees: Number(apiPurchase.total_base_fees) || 0,   // Convert string to number
+    totalDiscount: Number(apiPurchase.total_discount_amount) || 0, // Convert string to number
     dueDate: apiPurchase.due_date,
     suppliers: {}, // Will be populated separately from purchase_suppliers table
     payments: {
@@ -54,61 +53,32 @@ const convertApiPurchaseToAppPurchase = (apiPurchase: ApiPurchase): Purchase => 
 };
 
 // Convert app purchase to API purchase format
-const convertAppPurchaseToApiPurchase = (appPurchase: any): CreatePurchaseData => ({
-  date: appPurchase.date,
-  store_id: appPurchase.storeId,
-  total_grams: appPurchase.totalGrams,
-  total_fees: appPurchase.totalFees,
-  total_discount: appPurchase.totalDiscount,
-  due_date: appPurchase.dueDate,
-});
+const convertAppPurchaseToApiPurchase = (appPurchase: any): CreatePurchaseData => {
+  console.log('🔄 Converting app purchase to API format:');
+  console.log('   📥 Input appPurchase:', appPurchase);
+  console.log('   📥 appPurchase.supplierId:', appPurchase.supplierId);
+  
+  const apiData = {
+    id: appPurchase.id, // Include the id field that API requires
+    date: appPurchase.date,
+    store_id: appPurchase.storeId,
+    supplier_id: appPurchase.supplierId, // Add supplier_id field
+    total_grams_21k_equivalent: appPurchase.totalGrams, // Map to correct field name
+    total_base_fees: appPurchase.totalFees, // Map to correct field name
+    total_discount_amount: appPurchase.totalDiscount, // Map to correct field name
+    total_net_fees: appPurchase.totalFees - appPurchase.totalDiscount, // Calculate net fees
+    due_date: appPurchase.dueDate,
+  };
+  
+  console.log('   📤 Output API data:', apiData);
+  return apiData;
+};
 
 // Purchase Service
 export class PurchaseService {
-  // Recalculate payment totals for existing purchases (to fix karat conversion issues)
+  // This function is no longer needed - using API only
   static recalculatePaymentTotals(): void {
-    const purchases = getMockPurchases();
-    
-    purchases.forEach(purchase => {
-      console.log(`Recalculating payment totals for purchase ${purchase.id}:`, {
-        paymentHistoryLength: purchase.paymentHistory.length,
-        paymentHistory: purchase.paymentHistory,
-      });
-      
-      // Recalculate gramsPaid from payment history (converting to 21k equivalent)
-      const totalGramsPaid21k = purchase.paymentHistory.reduce((sum, payment) => {
-        console.log(`Processing payment:`, {
-          gramsPaid: payment.gramsPaid,
-          karatType: payment.karatType,
-          typeOfGramsPaid: typeof payment.gramsPaid,
-          typeOfKaratType: typeof payment.karatType,
-        });
-        
-        const gramsPaid21kEquivalent = convertTo21kEquivalent(payment.gramsPaid, payment.karatType);
-        console.log(`Converted to 21k equivalent:`, gramsPaid21kEquivalent);
-        return sum + gramsPaid21kEquivalent;
-      }, 0);
-      
-      // Recalculate feesPaid from payment history
-      const totalFeesPaid = purchase.paymentHistory.reduce((sum, payment) => {
-        return sum + (Number(payment.feesPaid) || 0);
-      }, 0);
-      
-      console.log(`Final totals for purchase ${purchase.id}:`, {
-        totalGramsPaid21k,
-        totalFeesPaid,
-      });
-      
-      // Update purchase totals
-      purchase.payments.gramsPaid = totalGramsPaid21k;
-      purchase.payments.feesPaid = totalFeesPaid;
-      
-      // Update status
-      purchase.status = calculateStatus(purchase);
-    });
-    
-    // Save updated purchases
-    setMockPurchases(purchases);
+    console.warn('⚠️ recalculatePaymentTotals: This function is no longer needed - using API only');
   }
 
   // Get all purchases
@@ -185,20 +155,15 @@ export class PurchaseService {
         
         return purchases;
       } else {
-        console.warn('⚠️ Purchases API not available, falling back to mock data');
-        console.log('API response was not successful:', response);
-        const mockPurchases = getMockPurchases();
-        console.log('📦 Returning mock purchases:', mockPurchases.length, 'purchases');
-        return mockPurchases;
+        console.error('❌ Purchases API failed:', response);
+        throw new Error('Failed to fetch purchases from API');
       }
     } catch (error) {
       console.error('❌ Error fetching purchases:', error);
-      console.warn('⚠️ Purchases API not available, falling back to mock data');
-      const mockPurchases = getMockPurchases();
-      console.log('📦 Returning mock purchases (error fallback):', mockPurchases.length, 'purchases');
-      return mockPurchases;
+      throw error;
     }
   }
+
 
   // Get purchase by ID
   static async getPurchaseById(id: string): Promise<Purchase | undefined> {
@@ -256,48 +221,61 @@ export class PurchaseService {
         console.log(`PurchaseService.getPurchaseById(${id}): found purchase with ${purchase.paymentHistory.length} payments`);
         return purchase;
       } else {
-        console.warn('⚠️ Purchase API not available, falling back to mock data');
-        const purchases = getMockPurchases();
-        const purchase = purchases.find(p => p.id === id);
-        console.log(`PurchaseService.getPurchaseById(${id}): found purchase with ${purchase?.paymentHistory?.length || 0} payments`);
-        return purchase;
+        console.error('❌ Purchase API failed:', response);
+        return undefined;
       }
     } catch (error) {
       console.error('❌ Error fetching purchase:', error);
-      console.warn('⚠️ Purchase API not available, falling back to mock data');
-    const purchases = getMockPurchases();
-    const purchase = purchases.find(p => p.id === id);
-    console.log(`PurchaseService.getPurchaseById(${id}): found purchase with ${purchase?.paymentHistory?.length || 0} payments`);
-    return purchase;
+      return undefined;
     }
   }
 
   // Create new purchase
   static async createPurchase(purchaseData: CreatePurchaseRequest): Promise<{ success: boolean; data?: Purchase; error?: string }> {
     try {
-      console.log('🛒 Creating purchase via API...');
+      console.log('🛒 Creating Purchase...');
+      console.log('   📦 Data:', purchaseData);
+      console.log(''); // Add space
     
     const fees = calculatePurchaseFees(purchaseData.suppliers, purchaseData.date);
     // Calculate total grams from the new karat structure (sum of totalGrams21k for all suppliers)
-    const totalGrams = Math.round(Object.values(purchaseData.suppliers).reduce((sum, supplierData) => {
+    const totalGrams = roundGrams(Object.values(purchaseData.suppliers).reduce((sum, supplierData) => {
       if (supplierData && typeof supplierData === 'object') {
         return sum + (supplierData.totalGrams21k || 0);
       }
       return sum;
-    }, 0) * 10) / 10; // Round to 1 decimal place
+    }, 0)); // Round to 1 decimal place
       
-      const apiPurchaseData = convertAppPurchaseToApiPurchase({
+      const purchaseDataForApi = {
         ...purchaseData,
         totalGrams,
         totalFees: fees.totalFees,
         totalDiscount: fees.totalDiscount,
         dueDate: calculateDueDate(purchaseData.date),
-      });
+      };
+      
+      console.log('   📦 Purchase data before conversion:', purchaseDataForApi);
+      console.log('   📦 Purchase data supplierId:', purchaseDataForApi.supplierId);
+      
+      const apiPurchaseData = convertAppPurchaseToApiPurchase(purchaseDataForApi);
+      
+      console.log('   📤 Sending to API:', apiPurchaseData);
+      console.log('   📤 API Data includes supplier_id:', apiPurchaseData.supplier_id);
+      console.log('   📤 Required fields check:');
+      console.log('     - id:', apiPurchaseData.id);
+      console.log('     - store_id:', apiPurchaseData.store_id);
+      console.log('     - supplier_id:', apiPurchaseData.supplier_id);
+      console.log('     - date:', apiPurchaseData.date);
       
       const response = await purchasesApiService.createPurchase(apiPurchaseData);
       
       if (response.success && response.data) {
-        console.log('✅ Purchase created via API:', response.data.id);
+        console.log('✅ Purchase Created Successfully');
+        console.log('   🔄 Converting response...');
+        console.log(''); // Add space
+        
+        // Convert API response to frontend format
+        const frontendPurchase = convertApiPurchaseToAppPurchase(response.data);
         const newPurchase = convertApiPurchaseToAppPurchase(response.data);
         newPurchase.suppliers = purchaseData.suppliers;
         newPurchase.payments = { gramsPaid: 0, feesPaid: 0 };
@@ -320,114 +298,78 @@ export class PurchaseService {
         
         return { success: true, data: newPurchase };
       } else {
-        console.warn('⚠️ Purchase API not available, falling back to mock data');
-        // Fallback to mock data
-        const purchases = getMockPurchases();
-        const newId = generatePurchaseId();
-    
-    const newPurchase: Purchase = {
-      id: newId,
-      date: purchaseData.date,
-      storeId: purchaseData.storeId,
-      status: 'Pending',
-      totalGrams,
-      totalFees: fees.totalFees,
-      totalDiscount: fees.totalDiscount,
-      dueDate: calculateDueDate(purchaseData.date),
-      suppliers: purchaseData.suppliers,
-      payments: {
-        gramsPaid: 0,
-        feesPaid: 0,
-      },
-      paymentHistory: [],
-    };
-
-    // Add new purchase to the list
-    const updatedPurchases = [...purchases, newPurchase];
-    
-    // Recalculate all purchases in the month after adding new purchase
-    const recalculatedResult = RecalculationService.recalculateAfterPurchaseChange(updatedPurchases, purchaseData.date);
-    
-    // Update mock data with recalculated purchases
-    setMockPurchases(recalculatedResult.updatedPurchases);
-    
-        return { success: true, data: newPurchase };
+        console.error('❌ Purchase API failed:', response);
+        return { success: false, error: 'Failed to create purchase' };
       }
     } catch (error) {
       console.error('❌ Error creating purchase:', error);
-      console.warn('⚠️ Purchase API not available, falling back to mock data');
-      
-      // Fallback to mock data
-      const purchases = getMockPurchases();
-      const newId = generatePurchaseId();
-      
-      const fees = calculatePurchaseFees(purchaseData.suppliers, purchaseData.date);
-      const totalGrams = Math.round(Object.values(purchaseData.suppliers).reduce((sum, supplierData) => {
-        if (supplierData && typeof supplierData === 'object') {
-          return sum + (supplierData.totalGrams21k || 0);
-        }
-        return sum;
-      }, 0) * 10) / 10;
-      
-      const newPurchase: Purchase = {
-        id: newId,
-        date: purchaseData.date,
-        storeId: purchaseData.storeId,
-        status: 'Pending',
-        totalGrams,
-        totalFees: fees.totalFees,
-        totalDiscount: fees.totalDiscount,
-        dueDate: calculateDueDate(purchaseData.date),
-        suppliers: purchaseData.suppliers,
-        payments: {
-          gramsPaid: 0,
-          feesPaid: 0,
-        },
-        paymentHistory: [],
-      };
-
-      const updatedPurchases = [...purchases, newPurchase];
-      const recalculatedResult = RecalculationService.recalculateAfterPurchaseChange(updatedPurchases, purchaseData.date);
-      setMockPurchases(recalculatedResult.updatedPurchases);
-      
-      return { success: true, data: newPurchase };
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to create purchase' };
     }
   }
 
   // Update purchase
-  static updatePurchase(id: string, updates: Partial<Purchase>): boolean {
-    const purchases = getMockPurchases();
-    const index = purchases.findIndex(p => p.id === id);
-    
-    if (index === -1) return false;
-    
-    purchases[index] = { ...purchases[index], ...updates };
-    setMockPurchases(purchases);
-    
-    return true;
+  static async updatePurchase(id: string, updateData: any): Promise<{ success: boolean; data?: Purchase; error?: string }> {
+    try {
+      console.log('📝 Updating Purchase...');
+      console.log('   📦 ID:', id);
+      console.log('   📦 Data:', updateData);
+      console.log(''); // Add space
+      
+      const apiUpdateData = convertAppPurchaseToApiPurchase(updateData);
+      console.log('   📤 Sending to API:', apiUpdateData);
+      console.log('   📤 API Data includes supplier_id:', apiUpdateData.supplier_id);
+      
+      const response = await purchasesApiService.updatePurchase(id, apiUpdateData);
+      
+      if (response.success && response.data) {
+        console.log('✅ Purchase Updated Successfully');
+        console.log('   🔄 Converting response...');
+        console.log(''); // Add space
+        const frontendPurchase = convertApiPurchaseToAppPurchase(response.data);
+        return { success: true, data: frontendPurchase };
+      } else {
+        console.error('❌ Purchase API failed:', response);
+        return { success: false, error: 'Failed to update purchase' };
+      }
+    } catch (error) {
+      console.error('❌ Error updating purchase:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to update purchase' };
+    }
   }
 
-  // Delete purchase
-  static deletePurchase(id: string): boolean {
-    const purchases = getMockPurchases();
-    const filteredPurchases = purchases.filter(p => p.id !== id);
-    
-    if (filteredPurchases.length === purchases.length) return false;
-    
-    setMockPurchases(filteredPurchases);
-    return true;
+  // Delete purchase - using API only
+  static async deletePurchase(id: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      console.log('🗑️ Deleting purchase:', id);
+      const response = await purchasesApiService.deletePurchase(id);
+      
+      if (response.success) {
+        console.log('✅ Purchase deleted successfully');
+        return { success: true };
+      } else {
+        console.error('❌ Delete purchase API failed:', response);
+        return { success: false, error: 'Failed to delete purchase' };
+      }
+    } catch (error) {
+      console.error('❌ Error deleting purchase:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to delete purchase' };
+    }
   }
 
-  // Get purchase count (for testing tier behavior)
-  static getPurchaseCount(): number {
-    return getMockPurchases().length;
+  // Get purchase count - using API only
+  static async getPurchaseCount(): Promise<number> {
+    try {
+      const purchases = await this.getAllPurchases();
+      return purchases.length;
+    } catch (error) {
+      console.error('❌ Error getting purchase count:', error);
+      return 0;
+    }
   }
 
-  // Reset to default state (for testing)
+  // Reset function no longer needed - using API only
   static resetToDefaultState(): void {
-    // This will reset the mock data to its initial state
-    // The businessLogic.ts file contains the initial mock data
-    window.location.reload(); // Simple way to reset everything
+    console.warn('⚠️ resetToDefaultState: This function is no longer needed - using API only');
   }
 
   // Filter purchases
@@ -482,43 +424,7 @@ export class PurchaseService {
       return filteredPurchases;
     } catch (error) {
       console.error('❌ Error filtering purchases:', error);
-      console.warn('⚠️ Falling back to mock data for filtering');
-      
-      // Fallback to mock data
-    let purchases = getMockPurchases();
-    
-    if (filters.store && filters.store !== 'All') {
-      purchases = purchases.filter(p => p.storeId === filters.store);
-    }
-    
-    if (filters.status) {
-      purchases = purchases.filter(p => p.status === filters.status);
-    }
-    
-    if (filters.searchQuery) {
-      const query = filters.searchQuery.toLowerCase();
-      purchases = purchases.filter(p => 
-        p.storeId.toLowerCase().includes(query) ||
-        p.status.toLowerCase().includes(query) ||
-        p.id.includes(query)
-      );
-    }
-    
-    if (filters.dateFrom) {
-      purchases = purchases.filter(p => p.date >= filters.dateFrom!);
-    }
-    
-    if (filters.dateTo) {
-      purchases = purchases.filter(p => p.date <= filters.dateTo!);
-    }
-    
-    purchases.sort((a, b) => {
-      const daysLeftA = getDaysLeft(a.dueDate);
-      const daysLeftB = getDaysLeft(b.dueDate);
-        return daysLeftA - daysLeftB;
-    });
-    
-    return purchases;
+      throw error;
     }
   }
 }
@@ -546,35 +452,8 @@ export class PaymentService {
         emitPaymentAdded();
         return { success: true };
       } else {
-        // If API fails, fall back to mock data for now
-        console.warn('Payments API not available, falling back to mock data');
-    const purchases = getMockPurchases();
-    const purchase = purchases.find(p => p.id === purchaseId);
-        if (!purchase) return { success: false, error: 'Purchase not found' };
-
-        const newPayment: Payment = paymentData; // paymentData already has the id
-
-    // Add to payment history
-    purchase.paymentHistory.push(newPayment);
-    
-        // Update totals (convert payment grams to 21k equivalent to match purchase totalGrams)
-        const gramsPaid21kEquivalent = convertTo21kEquivalent(paymentData.gramsPaid, paymentData.karatType);
-        purchase.payments.gramsPaid += gramsPaid21kEquivalent;
-    purchase.payments.feesPaid += paymentData.feesPaid;
-    
-    // Update status
-    purchase.status = calculateStatus(purchase);
-    
-    // Recalculate all purchases in the current month after payment change
-    const recalculatedPurchases = RecalculationService.recalculateAfterPaymentChange(purchases, purchaseId);
-    
-    // Update mock data with recalculated purchases
-    setMockPurchases(recalculatedPurchases);
-    
-    // Emit refresh event to update UI
-    console.log('Emitting payment-added event for purchase:', purchaseId);
-    emitPaymentAdded();
-        return { success: true };
+        console.error('❌ Payment API failed:', response);
+        return { success: false, error: 'Failed to add payment' };
       }
     } catch (error) {
       console.error('❌ Error adding payment:', error);
@@ -583,35 +462,7 @@ export class PaymentService {
         stack: error instanceof Error ? error.stack : undefined,
         error: error
       });
-      // If API fails, fall back to mock data for now
-      console.warn('⚠️ Payments API not available, falling back to mock data');
-      const purchases = getMockPurchases();
-      const purchase = purchases.find(p => p.id === purchaseId);
-      if (!purchase) return { success: false, error: 'Purchase not found' };
-
-      const newPayment: Payment = paymentData; // paymentData already has the id
-
-      // Add to payment history
-      purchase.paymentHistory.push(newPayment);
-      
-      // Update totals (convert payment grams to 21k equivalent to match purchase totalGrams)
-      const gramsPaid21kEquivalent = convertTo21kEquivalent(paymentData.gramsPaid, paymentData.karatType);
-      purchase.payments.gramsPaid += gramsPaid21kEquivalent;
-      purchase.payments.feesPaid += paymentData.feesPaid;
-      
-      // Update status
-      purchase.status = calculateStatus(purchase);
-      
-      // Recalculate all purchases in the current month after payment change
-      const recalculatedPurchases = RecalculationService.recalculateAfterPaymentChange(purchases, purchaseId);
-      
-      // Update mock data with recalculated purchases
-      setMockPurchases(recalculatedPurchases);
-      
-      // Emit refresh event to update UI
-      console.log('Emitting payment-added event for purchase:', purchaseId);
-      emitPaymentAdded();
-      return { success: true };
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to add payment' };
     }
   }
 
@@ -625,19 +476,12 @@ export class PaymentService {
         console.log(`PaymentService.getPayments(${purchaseId}): returning ${payments.length} payments`);
         return { success: true, data: payments };
       } else {
-        // If API fails, fall back to mock data for now
-        console.warn('Payments API not available, falling back to mock data');
-        const purchase = await PurchaseService.getPurchaseById(purchaseId);
-        const payments = purchase?.paymentHistory || [];
-        return { success: true, data: payments };
+        console.error('❌ Payment API failed:', response);
+        return { success: false, error: 'Failed to fetch payments' };
       }
     } catch (error) {
       console.error('Error fetching payments:', error);
-      // If API fails, fall back to mock data for now
-      console.warn('Payments API not available, falling back to mock data');
-      const purchase = await PurchaseService.getPurchaseById(purchaseId);
-    const payments = purchase?.paymentHistory || [];
-      return { success: true, data: payments };
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch payments' };
     }
   }
 
@@ -694,73 +538,12 @@ export class PaymentService {
         emitPaymentDeleted();
         return { success: true };
       } else {
-        // If API fails, fall back to mock data for now
-        console.warn('Payments API not available, falling back to mock data');
-    const purchases = getMockPurchases();
-    const purchase = purchases.find(p => p.id === purchaseId);
-        if (!purchase) return { success: false, error: 'Purchase not found' };
-
-    const paymentIndex = purchase.paymentHistory.findIndex(p => p.id === paymentId);
-        if (paymentIndex === -1) return { success: false, error: 'Payment not found' };
-
-    const payment = purchase.paymentHistory[paymentIndex];
-    
-    // Remove payment
-    purchase.paymentHistory.splice(paymentIndex, 1);
-    
-        // Update totals (convert payment grams to 21k equivalent to match purchase totalGrams)
-        const gramsPaid21kEquivalent = convertTo21kEquivalent(payment.gramsPaid, payment.karatType);
-        purchase.payments.gramsPaid -= gramsPaid21kEquivalent;
-    purchase.payments.feesPaid -= payment.feesPaid;
-    
-    // Update status
-    purchase.status = calculateStatus(purchase);
-    
-    // Recalculate all purchases in the current month after payment change
-    const recalculatedPurchases = RecalculationService.recalculateAfterPaymentChange(purchases, purchaseId);
-    
-    // Update mock data with recalculated purchases
-    setMockPurchases(recalculatedPurchases);
-    
-    // Emit refresh event to update UI
-    console.log('Emitting payment-deleted event for payment:', paymentId);
-    emitPaymentDeleted();
-        return { success: true };
+        console.error('❌ Payment API failed:', response);
+        return { success: false, error: 'Failed to delete payment' };
       }
     } catch (error) {
       console.error('Error deleting payment:', error);
-      // If API fails, fall back to mock data for now
-      console.warn('Payments API not available, falling back to mock data');
-      const purchases = getMockPurchases();
-      const purchase = purchases.find(p => p.id === purchaseId);
-      if (!purchase) return { success: false, error: 'Purchase not found' };
-
-      const paymentIndex = purchase.paymentHistory.findIndex(p => p.id === paymentId);
-      if (paymentIndex === -1) return { success: false, error: 'Payment not found' };
-
-      const payment = purchase.paymentHistory[paymentIndex];
-      
-      // Remove payment
-      purchase.paymentHistory.splice(paymentIndex, 1);
-      
-      // Update totals (convert payment grams to 21k equivalent to match purchase totalGrams)
-      const gramsPaid21kEquivalent = convertTo21kEquivalent(payment.gramsPaid, payment.karatType);
-      purchase.payments.gramsPaid -= gramsPaid21kEquivalent;
-      purchase.payments.feesPaid -= payment.feesPaid;
-      
-      // Update status
-      purchase.status = calculateStatus(purchase);
-      
-      // Recalculate all purchases in the current month after payment change
-      const recalculatedPurchases = RecalculationService.recalculateAfterPaymentChange(purchases, purchaseId);
-      
-      // Update mock data with recalculated purchases
-      setMockPurchases(recalculatedPurchases);
-      
-      // Emit refresh event to update UI
-      console.log('Emitting payment-deleted event for payment:', paymentId);
-      emitPaymentDeleted();
-      return { success: true };
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to delete payment' };
     }
   }
 }
@@ -795,32 +578,7 @@ export class AnalyticsService {
       return stats;
     } catch (error) {
       console.error('❌ Error getting purchase stats:', error);
-      console.warn('⚠️ Falling back to mock data for stats');
-      
-      // Fallback to mock data
-    const purchases = getMockPurchases();
-    
-    const stats = purchases.reduce((acc, purchase) => {
-      acc.totalPurchases += 1;
-      acc.totalGrams += purchase.totalGrams;
-      acc.totalFees += purchase.totalFees;
-      acc.totalPaid += purchase.payments.feesPaid;
-      if (purchase.status === 'Overdue') {
-        acc.overdueCount += 1;
-      }
-      return acc;
-    }, {
-      totalPurchases: 0,
-      totalGrams: 0,
-      totalFees: 0,
-      totalPaid: 0,
-      pendingAmount: 0,
-      overdueCount: 0,
-    });
-    
-    stats.pendingAmount = stats.totalFees - stats.totalPaid;
-    
-    return stats;
+      throw error;
     }
   }
 
@@ -858,38 +616,7 @@ export class AnalyticsService {
       };
     } catch (error) {
       console.error('❌ Error getting monthly trends:', error);
-      console.warn('⚠️ Falling back to mock data for trends');
-      
-      // Fallback to mock data
-    const purchases = getMockPurchases();
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-    const previousYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-    
-    const current = purchases.filter(p => {
-      const date = new Date(p.date);
-      return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-    });
-    
-    const previous = purchases.filter(p => {
-      const date = new Date(p.date);
-      return date.getMonth() === previousMonth && date.getFullYear() === previousYear;
-    });
-    
-    return {
-      currentMonth: {
-        grams: current.reduce((sum, p) => sum + p.totalGrams, 0),
-        fees: current.reduce((sum, p) => sum + p.totalFees, 0),
-        purchases: current.length,
-      },
-      previousMonth: {
-        grams: previous.reduce((sum, p) => sum + p.totalGrams, 0),
-        fees: previous.reduce((sum, p) => sum + p.totalFees, 0),
-        purchases: previous.length,
-      },
-    };
+      throw error;
     }
   }
 }

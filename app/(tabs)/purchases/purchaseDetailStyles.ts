@@ -16,11 +16,17 @@ export const styles = StyleSheet.create({
     fontWeight: '500',
   },
   purchaseHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 24,
     paddingBottom: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+  },
+  headerContent: {
+    flex: 1,
   },
   purchaseTitle: {
     fontSize: 24,
@@ -31,6 +37,17 @@ export const styles = StyleSheet.create({
   purchaseSubtitle: {
     fontSize: 14,
     color: '#6B7280',
+  },
+  editButton: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  editButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
   },
   header: {
     flexDirection: 'row',
@@ -49,9 +66,6 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     color: '#3B82F6',
     fontWeight: '500',
-  },
-  headerContent: {
-    flex: 1,
   },
   title: {
     fontSize: 24,
@@ -101,21 +115,52 @@ export const styles = StyleSheet.create({
   },
   infoContent: {
     padding: 16,
+    overflow: 'hidden',
+  },
+  twoColumnLayout: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    gap: 16,
+  },
+  column: {
+    flex: 1,
+    paddingHorizontal: 8,
+    minWidth: 0,
+  },
+  dateSection: {
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    paddingTop: 20,
+    marginTop: 12,
+    marginHorizontal: 0,
+    backgroundColor: '#FAFAFA',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 10,
+    minHeight: 32,
+    flexWrap: 'nowrap',
   },
   infoLabel: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#6B7280',
+    fontWeight: '500',
+    flex: 1,
+    marginRight: 16,
   },
   infoValue: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 15,
+    fontWeight: '600',
     color: '#1F2937',
+    textAlign: 'right',
+    flex: 0,
+    flexShrink: 0,
+    flexWrap: 'nowrap',
   },
   discountLabel: {
     color: '#10B981',

@@ -1,31 +1,15 @@
-import { APP_CONFIG } from '../constants';
-import { mockPurchases as initialMockPurchases } from '../mockData';
+import { APP_CONFIG } from '../constants/constants';
 import { PurchaseFees } from '../types/apiTypes';
-import { Purchase } from '../types/dataTypes';
 
-// Mock data - this will be replaced with API calls
-let mockPurchases: Purchase[] = [...initialMockPurchases];
+// These functions are no longer needed - using API only
 
-// Data access functions (will be replaced with API calls)
-export const getMockPurchases = (): Purchase[] => {
-  console.log('getMockPurchases called, returning:', mockPurchases.length, 'purchases');
-  return mockPurchases;
-};
-
-export const setMockPurchases = (purchases: Purchase[]): void => {
-  console.log('setMockPurchases called with:', purchases.length, 'purchases');
-  mockPurchases = purchases;
-  console.log('mockPurchases updated, new length:', mockPurchases.length);
-};
-
-// ID generation functions
+// ID generation functions - using timestamp-based IDs
 export const generatePurchaseId = (): string => {
-  return (mockPurchases.length + 1).toString();
+  return Date.now().toString();
 };
 
 export const generatePaymentId = (purchaseId: string): string => {
-  const purchase = mockPurchases.find(p => p.id === purchaseId);
-  return `${purchaseId}-${(purchase?.paymentHistory.length || 0) + 1}`;
+  return `${purchaseId}-${Date.now()}`;
 };
 
 // Business logic calculations
@@ -33,21 +17,25 @@ export const calculateBaseFee = (grams: number): number => {
   return grams * APP_CONFIG.BASE_FEE_PER_GRAM;
 };
 
+// This function will need to be updated to use API data
+// For now, returning 0 to avoid errors
 export const getCurrentMonthTotalGrams = (): number => {
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
-  
-  return mockPurchases.reduce((total, purchase) => {
-    const purchaseDate = new Date(purchase.date);
-    if (purchaseDate.getMonth() === currentMonth && purchaseDate.getFullYear() === currentYear) {
-      return total + purchase.totalGrams;
-    }
-    return total;
-  }, 0);
+  console.warn('⚠️ getCurrentMonthTotalGrams: This function needs to be updated to use API data');
+  return 0;
 };
 
 export const getDiscountRate = (supplier: string): number => {
+  // Debug logging
+  console.log('🔍 getDiscountRate called with supplier:', supplier);
+  console.log('🔍 APP_CONFIG:', APP_CONFIG);
+  console.log('🔍 APP_CONFIG.MONTHLY_DISCOUNT_THRESHOLDS:', APP_CONFIG?.MONTHLY_DISCOUNT_THRESHOLDS);
+  
+  // Defensive check for APP_CONFIG
+  if (!APP_CONFIG || !APP_CONFIG.MONTHLY_DISCOUNT_THRESHOLDS || !APP_CONFIG.DISCOUNT_RATES) {
+    console.warn('⚠️ APP_CONFIG is not properly loaded, using default discount rate');
+    return 0; // Return 0 discount if config is not available
+  }
+  
   const monthlyTotal = getCurrentMonthTotalGrams();
   let tier: 'low' | 'medium' | 'high';
   
@@ -59,24 +47,23 @@ export const getDiscountRate = (supplier: string): number => {
     tier = 'low';
   }
   
-  return APP_CONFIG.DISCOUNT_RATES[supplier as keyof typeof APP_CONFIG.DISCOUNT_RATES][tier];
+  const discountRate = APP_CONFIG.DISCOUNT_RATES[supplier as keyof typeof APP_CONFIG.DISCOUNT_RATES]?.[tier] || 0;
+  console.log('🔍 Calculated discount rate:', discountRate, 'for supplier:', supplier, 'tier:', tier);
+  
+  return discountRate;
 };
 
 export const shouldApplyDiscount = (purchaseDate: string): boolean => {
-  const purchaseDateObj = new Date(purchaseDate);
-  const purchaseMonth = purchaseDateObj.getMonth();
-  const purchaseYear = purchaseDateObj.getFullYear();
+  // Defensive check for APP_CONFIG
+  if (!APP_CONFIG || !APP_CONFIG.MONTHLY_DISCOUNT_THRESHOLDS) {
+    console.warn('⚠️ APP_CONFIG is not properly loaded in shouldApplyDiscount, returning false');
+    return false; // Return false if config is not available
+  }
   
-  // Calculate total grams for that specific month
-  const monthlyTotal = mockPurchases.reduce((total, purchase) => {
-    const otherPurchaseDate = new Date(purchase.date);
-    if (otherPurchaseDate.getMonth() === purchaseMonth && otherPurchaseDate.getFullYear() === purchaseYear) {
-      return total + purchase.totalGrams;
-    }
-    return total;
-  }, 0);
-  
-  return monthlyTotal >= APP_CONFIG.MONTHLY_DISCOUNT_THRESHOLDS.MEDIUM;
+  // For now, always apply discount since we can't calculate monthly totals without API data
+  // This function will need to be updated to fetch monthly totals from API
+  console.warn('⚠️ shouldApplyDiscount: This function needs to be updated to use API data for monthly totals');
+  return true; // Always apply discount for now
 };
 
 export const calculateDiscountAmount = (supplier: string, grams: number, purchaseDate: string): number => {
@@ -94,6 +81,14 @@ export const calculateNetFee = (supplier: string, grams: number, purchaseDate: s
 };
 
 export const calculateDueDate = (purchaseDate: string): string => {
+  // Defensive check for APP_CONFIG
+  if (!APP_CONFIG || !APP_CONFIG.DEFAULT_PAYMENT_TERMS_DAYS) {
+    console.warn('⚠️ APP_CONFIG is not properly loaded in calculateDueDate, using default 30 days');
+    const dueDate = new Date(purchaseDate);
+    dueDate.setDate(dueDate.getDate() + 30); // Default to 30 days
+    return dueDate.toISOString().split('T')[0];
+  }
+  
   const dueDate = new Date(purchaseDate);
   dueDate.setDate(dueDate.getDate() + APP_CONFIG.DEFAULT_PAYMENT_TERMS_DAYS);
   return dueDate.toISOString().split('T')[0];

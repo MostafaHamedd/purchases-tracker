@@ -1,5 +1,5 @@
 import { DeleteConfirmationDialog } from '@/app/(tabs)/purchases/components/DeleteConfirmationDialog';
-import { PaymentService } from '@/data';
+import { PaymentService, PurchaseService } from '@/data';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -12,11 +12,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useStores } from '../stores/hooks/useStores';
 import { AddPaymentDialog } from './components/AddPaymentDialog';
+import { AddPurchaseDialog } from './components/AddPurchaseDialog';
 import { EditPaymentDialog } from './components/EditPaymentDialog';
 import { PaymentCard } from './components/PaymentCard';
 import { SupplierReceiptCard } from './components/SupplierReceiptCard';
 import { usePurchaseDetail } from './hooks/usePurchaseDetail';
 import { styles } from './purchaseDetailStyles';
+
+// Utility function for consistent grams rounding (matches services.ts)
+const roundGrams = (grams: number): number => {
+  return Math.round(grams * 10) / 10; // Round to 1 decimal place
+};
 
 export default function PurchaseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -25,6 +31,7 @@ export default function PurchaseDetailScreen() {
   const [showAddPaymentDialog, setShowAddPaymentDialog] = useState(false);
   const [showEditPaymentDialog, setShowEditPaymentDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showEditPurchaseDialog, setShowEditPurchaseDialog] = useState(false);
   const [paymentToEdit, setPaymentToEdit] = useState<any>(null);
   const [paymentToDelete, setPaymentToDelete] = useState<{ id: string; date: string } | null>(null);
   
@@ -56,7 +63,8 @@ export default function PurchaseDetailScreen() {
     const date = new Date(dateString);
     const month = date.toLocaleDateString('en-US', { month: 'short' });
     const day = date.getDate();
-    return `${month} ${day}`;
+    const year = date.getFullYear();
+    return `${month} ${day}, ${year}`;
   };
 
   if (!purchase) {
@@ -83,7 +91,7 @@ export default function PurchaseDetailScreen() {
   const handleDeletePayment = (paymentId: string) => {
     const payment = payments.find(p => p.id === paymentId);
     if (payment) {
-      setPaymentToDelete({ id: paymentId, date: payment.date });
+      setPaymentToDelete({ id: paymentId, date: formatPaymentDate(payment.date) });
       setShowDeleteDialog(true);
     }
   };
@@ -151,33 +159,39 @@ export default function PurchaseDetailScreen() {
     }
   };
 
-  // Calculate total grams from suppliers (21k equivalent)
-  const calculateTotalGramsFromSuppliers = () => {
-    console.log('🔍 Purchase detail - calculating total grams from suppliers:');
-    console.log('- purchase:', purchase);
-    console.log('- purchase.suppliers:', purchase?.suppliers);
-    
-    if (!purchase?.suppliers) {
-      console.log('- No suppliers found, returning 0');
-      return 0;
-    }
-    
-    let total = 0;
-    Object.entries(purchase.suppliers).forEach(([supplierCode, supplier]) => {
-      console.log(`- Supplier ${supplierCode}:`, supplier);
-      if (supplier && typeof supplier === 'object') {
-        const grams = supplier.totalGrams21k || 0;
-        console.log(`  - totalGrams21k: ${grams}`);
-        total += grams;
-      }
-    });
-    
-    const result = Math.round(total * 10) / 10; // Round to 1 decimal place
-    console.log(`- Total calculated: ${result}`);
-    return result;
+  // Helper function to format grams display (rounding is handled at data level)
+  const formatGrams = (grams: number): string => {
+    return grams % 1 === 0 ? grams.toString() : grams.toFixed(1);
   };
 
-  const calculatedTotalGrams = calculateTotalGramsFromSuppliers();
+  // Helper function to format currency values consistently
+  const formatCurrency = (amount: number): string => {
+    return `EGP ${Math.abs(amount).toLocaleString('en-US', { 
+      minimumFractionDigits: 0, 
+      maximumFractionDigits: 0 
+    })}`;
+  };
+
+  // Get purchase data in a clean, organized way
+  const purchaseData = {
+    totalGrams: purchase?.totalGrams || 0,
+    totalFees: purchase?.totalFees || 0,
+    totalDiscount: purchase?.totalDiscount || 0,
+    netFees: (purchase?.totalFees || 0) - (purchase?.totalDiscount || 0),
+    dueDate: purchase?.dueDate,
+    status: purchase?.status,
+    suppliers: purchase?.suppliers || {},
+    // Calculate remaining amounts
+    remainingGrams: roundGrams((purchase?.totalGrams || 0) - (purchase?.payments?.gramsPaid || 0)),
+    remainingFees: (purchase?.totalFees || 0) - (purchase?.payments?.feesPaid || 0),
+  };
+
+  // Debug logging for purchase data
+  console.log('📊 Purchase Detail Data:');
+  console.log('   - Raw purchase:', purchase);
+  console.log('   - Clean purchaseData:', purchaseData);
+  console.log('   - Suppliers data:', purchase?.suppliers);
+  console.log('   - Suppliers keys:', Object.keys(purchase?.suppliers || {}));
 
 
   return (
@@ -192,10 +206,21 @@ export default function PurchaseDetailScreen() {
 
       {/* Purchase Header */}
       <View style={styles.purchaseHeader}>
-        <Text style={styles.purchaseTitle}>Purchase #{purchase.id}</Text>
-        <Text style={styles.purchaseSubtitle}>
-          {storesLoading ? 'Loading...' : (store?.code || `Store ${purchase.storeId}`)} • {formatDate(purchase.date)}
-        </Text>
+        <View style={styles.headerContent}>
+          <Text style={styles.purchaseTitle}>Purchase #{purchase.id}</Text>
+          <Text style={styles.purchaseSubtitle}>
+            {storesLoading ? 'Loading...' : (store?.code || `Store ${purchase.storeId}`)} • {formatDate(purchase.date)}
+          </Text>
+        </View>
+        {(!purchase?.payments?.gramsPaid || purchase.payments.gramsPaid === 0) && 
+         (!purchase?.payments?.feesPaid || purchase.payments.feesPaid === 0) && (
+          <TouchableOpacity 
+            style={styles.editButton}
+            onPress={() => setShowEditPurchaseDialog(true)}
+          >
+            <Text style={styles.editButtonText}>Edit</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Loading State */}
@@ -223,43 +248,61 @@ export default function PurchaseDetailScreen() {
         <View style={styles.infoCard}>
           <View style={styles.infoHeader}>
             <Text style={styles.cardTitle}>Purchase Information</Text>
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(purchase.status) }]}>
-              <Text style={styles.statusText}>{purchase.status}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(purchaseData.status) }]}>
+              <Text style={styles.statusText}>{purchaseData.status}</Text>
             </View>
           </View>
 
           <View style={styles.infoContent}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Total Grams (21k equivalent):</Text>
-              <Text style={styles.infoValue}>{calculatedTotalGrams}g</Text>
+            {/* Two Column Layout for Grams and Fees */}
+            <View style={styles.twoColumnLayout}>
+              {/* Left Column - Grams */}
+              <View style={styles.column}>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Total Grams (21k):</Text>
+                  <Text style={styles.infoValue}>{formatGrams(purchaseData.totalGrams)}g</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Grams Due:</Text>
+                  <Text style={[styles.infoValue, { color: '#EF4444', fontWeight: '700' }]}>{formatGrams(purchaseData.remainingGrams)}g</Text>
+                </View>
+              </View>
+              
+              {/* Right Column - Fees */}
+              <View style={styles.column}>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Base Fees:</Text>
+                  <Text style={styles.infoValue}>{formatCurrency(purchaseData.totalFees)}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Discount:</Text>
+                  <Text style={[styles.infoValue, styles.discountValue]}>{formatCurrency(purchaseData.totalDiscount)}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Net Fees:</Text>
+                  <Text style={[styles.infoValue, { color: '#3B82F6', fontWeight: '700' }]}>{formatCurrency(purchaseData.netFees)}</Text>
+                </View>
+              </View>
             </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Base Fees:</Text>
-              <Text style={styles.infoValue}>EGP {(purchase.totalFees || 0).toLocaleString()}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Discount:</Text>
-              <Text style={[styles.infoValue, styles.discountValue]}>EGP {(purchase.totalDiscount || 0).toLocaleString()}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Net Fees:</Text>
-              <Text style={styles.infoValue}>EGP {((purchase.totalFees || 0) - (purchase.totalDiscount || 0)).toLocaleString()}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Due Date:</Text>
-              <Text style={styles.infoValue}>{purchase.dueDate || 'Not set'}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Days Left:</Text>
-              <Text style={[styles.infoValue, getDaysLeftColor(purchase.dueDate)]}>
-                {getDaysLeftText(purchase.dueDate)}
-              </Text>
+            
+            {/* Date Information at Bottom */}
+            <View style={styles.dateSection}>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Due Date:</Text>
+                <Text style={styles.infoValue}>{purchaseData.dueDate ? formatDate(purchaseData.dueDate) : 'Not set'}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Days Left:</Text>
+                <Text style={[styles.infoValue, getDaysLeftColor(purchaseData.dueDate)]}>
+                  {getDaysLeftText(purchaseData.dueDate)}
+                </Text>
+              </View>
             </View>
           </View>
         </View>
 
         {/* Supplier Receipts Card */}
-        <SupplierReceiptCard suppliers={purchase.suppliers} />
+        <SupplierReceiptCard suppliers={purchaseData.suppliers} />
 
         {/* Payment History */}
         <View style={styles.paymentsCard}>
@@ -312,10 +355,10 @@ export default function PurchaseDetailScreen() {
         }}
         purchaseId={purchase.id}
         purchase={{
-          totalGrams: calculatedTotalGrams,
-          netFees: (purchase.totalFees || 0) - (purchase.totalDiscount || 0),
-          totalFees: purchase.totalFees || 0,
-          totalDiscount: purchase.totalDiscount || 0
+          totalGrams: purchaseData.remainingGrams,
+          netFees: purchaseData.netFees,
+          totalFees: purchaseData.totalFees,
+          totalDiscount: purchaseData.totalDiscount
         }}
       />
 
@@ -338,6 +381,37 @@ export default function PurchaseDetailScreen() {
         onConfirm={confirmDeletePayment}
         title="Delete Payment"
         message={`Are you sure you want to delete the payment from ${paymentToDelete?.date}?`}
+      />
+
+      <AddPurchaseDialog
+        visible={showEditPurchaseDialog}
+        onClose={() => setShowEditPurchaseDialog(false)}
+        editMode={true}
+        existingPurchase={purchase}
+        onSubmit={async (purchaseData) => {
+          try {
+            // Convert the purchase data to update format
+            const updateData = {
+              id: purchase.id,
+              date: purchaseData.date,
+              storeId: purchaseData.storeId,
+              suppliers: purchaseData.suppliers,
+            };
+            
+            const result = await PurchaseService.updatePurchase(purchase.id, updateData);
+            setShowEditPurchaseDialog(false);
+            
+            if (result.success) {
+              await refreshPurchase();
+              Alert.alert('✅ Success', 'Purchase has been updated successfully!');
+            } else {
+              Alert.alert('❌ Error', result.error || 'Failed to update purchase. Please try again.');
+            }
+          } catch (error) {
+            console.error('Error updating purchase:', error);
+            Alert.alert('❌ Error', 'Failed to update purchase. Please try again.');
+          }
+        }}
       />
     </SafeAreaView>
   );

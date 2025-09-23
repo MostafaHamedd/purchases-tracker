@@ -19,6 +19,7 @@ export interface PaginatedResponse<T> {
 export interface CreatePurchaseRequest {
   date: string;
   storeId: string;
+  supplierId: string;
   suppliers: { [key: string]: { grams18k: number; grams21k: number; totalGrams21k: number } };
 }
 

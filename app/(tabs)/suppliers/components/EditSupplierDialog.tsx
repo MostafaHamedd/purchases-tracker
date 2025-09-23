@@ -1,4 +1,3 @@
-import { availableKaratTypes } from '@/data/mockData';
 import { DiscountTier, EditSupplierDialogProps, KaratType } from '@/data/types';
 import React, { useEffect, useState } from 'react';
 import {
@@ -13,6 +12,9 @@ import {
     View
 } from 'react-native';
 import { styles } from '../styles';
+
+// Karat types - moved from mock data
+const availableKaratTypes: KaratType[] = ['18', '21'];
 
 export function EditSupplierDialog({ 
   visible, 

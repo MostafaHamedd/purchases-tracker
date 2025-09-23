@@ -1,5 +1,4 @@
 import { refreshEvents } from '@/data';
-import { mockStores } from '@/data/mockData';
 import { Store as ApiStore, CreateStoreData, storesApiService, UpdateStoreData } from '@/data/services/storesApiService';
 import { Store } from '@/data/types';
 import { useCallback, useEffect, useState } from 'react';
@@ -37,6 +36,7 @@ export function useStores() {
       setLoading(true);
       setError(null);
       console.log('🔄 Fetching stores from API...');
+      
       const response = await storesApiService.getActiveStores();
       
       if (response.success) {
@@ -44,19 +44,14 @@ export function useStores() {
         const convertedStores = response.data.map(convertApiStoreToAppStore);
         setStores(convertedStores);
       } else {
-        // Fallback to mock data if API fails
-        console.warn('⚠️ Stores API not available, falling back to mock data');
-        console.log('📦 Mock stores:', mockStores);
-        setStores(mockStores);
-        setError(null); // Clear error since we have fallback data
+        console.error('❌ Stores API failed:', response);
+        setError('Failed to fetch stores from API');
+        setStores([]);
       }
     } catch (err) {
       console.error('❌ Error fetching stores:', err);
-      // Fallback to mock data if API fails
-      console.warn('⚠️ Stores API not available, falling back to mock data');
-      console.log('📦 Mock stores:', mockStores);
-      setStores(mockStores);
-      setError(null); // Clear error since we have fallback data
+      setError(err instanceof Error ? err.message : 'Failed to fetch stores');
+      setStores([]);
     } finally {
       setLoading(false);
     }
@@ -64,14 +59,7 @@ export function useStores() {
 
   // Load stores on mount
   useEffect(() => {
-    // Temporary: Force fallback to mock data for testing
-    console.log('🚀 Forcing mock stores for testing...');
-    setStores(mockStores);
-    setLoading(false);
-    setError(null);
-    
-    // Uncomment this line to test API again:
-    // fetchStores();
+    fetchStores();
   }, [fetchStores]);
 
   const addStore = async (storeData: Omit<Store, 'id' | 'createdAt' | 'updatedAt'>) => {

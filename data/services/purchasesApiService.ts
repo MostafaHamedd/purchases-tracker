@@ -6,20 +6,27 @@ export interface ApiPurchase {
   date: string;
   store_id: string;
   status: 'Paid' | 'Pending' | 'Partial' | 'Overdue';
-  total_grams: number;
-  total_fees: number;
-  total_discount: number;
+  total_grams_21k_equivalent: number;
+  total_base_fees: number;
+  total_discount_amount: number;
+  total_net_fees: number;
   due_date: string;
   created_at: string;
   updated_at: string;
+  // Additional fields from API response
+  store_name?: string;
+  store_code?: string;
 }
 
 export interface CreatePurchaseData {
+  id: string;
   date: string;
   store_id: string;
-  total_grams: number;
-  total_fees: number;
-  total_discount: number;
+  supplier_id: string;
+  total_grams_21k_equivalent: number;
+  total_base_fees: number;
+  total_discount_amount: number;
+  total_net_fees: number;
   due_date: string;
 }
 

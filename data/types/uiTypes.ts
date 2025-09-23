@@ -22,6 +22,8 @@ export interface AddPurchaseDialogProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: (data: PurchaseFormData) => void;
+  editMode?: boolean;
+  existingPurchase?: Purchase;
 }
 
 export interface AddPaymentDialogProps {
@@ -37,6 +39,13 @@ export interface EditPaymentDialogProps {
   onClose: () => void;
   onSubmit: (data: PaymentFormData) => void;
   payment?: Payment;
+}
+
+export interface EditPurchaseDialogProps {
+  visible: boolean;
+  onClose: () => void;
+  onSubmit: (data: any) => void;
+  purchase?: Purchase;
 }
 
 export interface PurchaseCardProps {

@@ -1,27 +1,84 @@
 import { AddPurchaseDialogProps } from '@/data/types';
 import { convertTo21kEquivalent } from '@/data/utils';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useStores } from '../../stores/hooks/useStores';
+import { useSuppliers } from '../../suppliers/hooks/useSuppliers';
 
-export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDialogProps) {
+export function AddPurchaseDialog({ visible, onClose, onSubmit, editMode = false, existingPurchase }: AddPurchaseDialogProps) {
+  // Utility function for consistent grams rounding (matches services.ts)
+  const roundGrams = (grams: number): number => {
+    return Math.round(grams * 10) / 10; // Round to 1 decimal place
+  };
+  
   const { stores } = useStores();
+  const { suppliers, loading: suppliersLoading } = useSuppliers();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState('');
+  
+  // Initialize suppliers data from API
+  const initializeSuppliersData = () => {
+    const suppliersData: Record<string, { grams: number; fees: number; discountRate: number }> = {};
+    suppliers.forEach(supplier => {
+      // Use the first available discount tier for 21k as default
+      const defaultDiscountRate = supplier.karat21.discountTiers.length > 0 
+        ? supplier.karat21.discountTiers[0].discountPercentage 
+        : 0;
+      suppliersData[supplier.code] = { 
+        grams: 0, 
+        fees: 0, 
+        discountRate: defaultDiscountRate 
+      };
+    });
+    return suppliersData;
+  };
+  
   const [formData, setFormData] = useState({
     store: '',
     date: new Date(),
     totalGrams: 0,
     selectedSuppliers: [] as string[],
-    suppliers: {
-      'ES18': { grams: 0, fees: 0, discountRate: 10 },
-      'EG18': { grams: 0, fees: 0, discountRate: 34 },
-      'EG21': { grams: 0, fees: 0, discountRate: 23 }
-    } as Record<string, { grams: number; fees: number; discountRate: number }>,
+    suppliers: initializeSuppliersData(),
     supplierReceipts: {} as Record<string, string[]>,
     receiptData: {} as Record<string, { grams: number; fees: number; karatType: '18' | '21' }>
   });
+
+  // Initialize form data when suppliers are loaded or when in edit mode
+  useEffect(() => {
+    if (suppliers.length > 0) {
+      const suppliersData = initializeSuppliersData();
+      
+      if (editMode && existingPurchase) {
+        // Pre-fill form with existing purchase data
+        setSelectedStoreId(existingPurchase.storeId);
+        setFormData(prev => ({
+          ...prev,
+          store: existingPurchase.storeId,
+          date: new Date(existingPurchase.date),
+          // Note: We'll need to reconstruct suppliers data from existing purchase
+          // For now, we'll start with empty suppliers and let user re-enter
+          selectedSuppliers: [],
+          suppliers: suppliersData,
+          supplierReceipts: {},
+          receiptData: {}
+        }));
+      } else if (!editMode) {
+        // Reset form for new purchase
+        setSelectedStoreId('');
+        setFormData(prev => ({
+          ...prev,
+          store: '',
+          date: new Date(),
+          totalGrams: 0,
+          selectedSuppliers: [],
+          suppliers: suppliersData,
+          supplierReceipts: {},
+          receiptData: {}
+        }));
+      }
+    }
+  }, [suppliers, editMode, existingPurchase]);
 
   const toggleSupplier = (supplier: string) => {
     setFormData(prev => ({
@@ -112,11 +169,13 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
       formData.supplierReceipts[supplier] || [supplier]
     );
     
-    return allReceipts.reduce((sum, receiptId) => {
+    const totalGrams = allReceipts.reduce((sum, receiptId) => {
       const data = formData.receiptData[receiptId] || { grams: 0, fees: 0, karatType: '21' };
       const grams21kEquivalent = convertTo21kEquivalent(data.grams, data.karatType);
       return sum + grams21kEquivalent;
     }, 0);
+    
+    return roundGrams(totalGrams); // Apply rounding to the total
   };
 
   const totalGrams = calculateTotalGrams();
@@ -144,11 +203,11 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
     
     const hasValidData = allReceipts.every(receiptId => {
       const data = formData.receiptData[receiptId] || { grams: 0, fees: 0, karatType: '21' };
-      return data.grams > 0 && data.fees > 0;
+      return data.grams > 0; // Only require grams, fees are optional
     });
 
     if (!hasValidData) {
-      Alert.alert('Error', 'Please enter valid grams and fees for all receipts');
+      Alert.alert('Error', 'Please enter valid grams for all receipts');
       return;
     }
 
@@ -169,7 +228,7 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
         }
       });
       
-      const totalGrams21kEquivalent = convertTo21kEquivalent(grams18k, '18') + convertTo21kEquivalent(grams21k, '21');
+      const totalGrams21kEquivalent = roundGrams(convertTo21kEquivalent(grams18k, '18') + convertTo21kEquivalent(grams21k, '21'));
       
       acc[supplier] = {
         grams18k: grams18k,
@@ -179,9 +238,20 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
       return acc;
     }, {} as Record<string, { grams18k: number; grams21k: number; totalGrams21k: number }>);
 
+    // Map supplier codes to API supplier IDs using real supplier data
+    const supplierCodeToId: Record<string, string> = {};
+    suppliers.forEach(supplier => {
+      supplierCodeToId[supplier.code] = supplier.id;
+    });
+    
+    // Get the first selected supplier ID (API requires a single supplier_id)
+    const firstSupplierCode = formData.selectedSuppliers.length > 0 ? formData.selectedSuppliers[0] : suppliers[0]?.code;
+    const firstSupplierId = supplierCodeToId[firstSupplierCode] || suppliers[0]?.id || '1';
+    
     const purchaseData = {
       id: Date.now().toString(),
       storeId: selectedStoreId,
+      supplierId: firstSupplierId, // Add supplier_id for API
       date: formData.date.toISOString().split('T')[0],
       totalGrams: totalGrams,
       suppliers: selectedSuppliersData,
@@ -190,6 +260,10 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
       netFees: totalGrams * -5,
       status: 'Pending'
     };
+
+    console.log('📝 AddPurchaseDialog submitting purchaseData:', purchaseData);
+    console.log('📝 AddPurchaseDialog supplierId:', purchaseData.supplierId);
+    console.log('📝 AddPurchaseDialog firstSupplierId:', firstSupplierId);
 
     onSubmit(purchaseData);
   };
@@ -250,6 +324,7 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
       <View style={styles.overlay}>
         <View style={styles.dialog}>
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+            <Text style={styles.title}>{editMode ? 'Edit Purchase' : 'Add Purchase'}</Text>
             <Text style={styles.sectionTitle}>Select Store</Text>
             <View style={styles.storeButtons}>
               {stores.map((store) => (
@@ -339,25 +414,29 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
             )}
 
             <Text style={styles.sectionTitle}>Select Suppliers</Text>
-            <View style={styles.supplierButtons}>
-              {['ES18', 'EG18', 'EG21'].map((supplier) => (
+            {suppliersLoading ? (
+              <Text style={styles.loadingText}>Loading suppliers...</Text>
+            ) : (
+              <View style={styles.supplierButtons}>
+                {suppliers.map((supplier) => (
                 <TouchableOpacity
-                  key={supplier}
+                  key={supplier.code}
                   style={[
                     styles.supplierButton,
-                    formData.selectedSuppliers.includes(supplier) && styles.selectedSupplierButton
+                    formData.selectedSuppliers.includes(supplier.code) && styles.selectedSupplierButton
                   ]}
-                  onPress={() => toggleSupplier(supplier)}
+                  onPress={() => toggleSupplier(supplier.code)}
                 >
                   <Text style={[
                     styles.supplierButtonText,
-                    formData.selectedSuppliers.includes(supplier) && styles.selectedSupplierButtonText
+                    formData.selectedSuppliers.includes(supplier.code) && styles.selectedSupplierButtonText
                   ]}>
-                    {supplier}
+                    {supplier.code}
                   </Text>
                 </TouchableOpacity>
               ))}
-            </View>
+              </View>
+            )}
 
             {formData.selectedSuppliers.length > 0 && (
               <Text style={styles.sectionTitle}>Enter Grams and Fees for Each Supplier</Text>
@@ -458,7 +537,7 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit }: AddPurchaseDia
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-              <Text style={styles.submitText}>Add Purchase</Text>
+              <Text style={styles.submitText}>{editMode ? 'Update Purchase' : 'Add Purchase'}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -484,6 +563,13 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     maxHeight: 500,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 20,
+    textAlign: 'center',
   },
   dateDisplay: {
     fontSize: 18,
@@ -611,17 +697,20 @@ const styles = StyleSheet.create({
   },
   supplierButtons: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     marginBottom: 20,
+    justifyContent: 'flex-start',
   },
   supplierButton: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#D1D5DB',
     borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 60,
+    alignItems: 'center',
   },
   selectedSupplierButton: {
     backgroundColor: '#000000',
@@ -778,5 +867,12 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '500',
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    padding: 20,
+    fontStyle: 'italic',
   },
 });

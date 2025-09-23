@@ -1,12 +1,18 @@
-import { mockSuppliers } from '@/data/mockData';
 import { SupplierReceiptCardProps } from '@/data/types';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useSuppliers } from '../../suppliers/hooks/useSuppliers';
 
 export function SupplierReceiptCard({ suppliers }: SupplierReceiptCardProps) {
+  const { suppliers: apiSuppliers } = useSuppliers();
+  
+  // Debug logging
+  console.log('🏪 SupplierReceiptCard received suppliers:', suppliers);
+  console.log('🏪 SupplierReceiptCard suppliers keys:', Object.keys(suppliers || {}));
+  
   // Function to get the correct discount rate based on supplier and grams
   const getDiscountRate = (supplierCode: string, grams: number) => {
-    const supplier = mockSuppliers.find(s => s.code === supplierCode);
+    const supplier = apiSuppliers.find(s => s.code === supplierCode);
     if (!supplier) return 0;
     
     // Use 21k discount tiers since we're working with 21k equivalent
@@ -27,8 +33,12 @@ export function SupplierReceiptCard({ suppliers }: SupplierReceiptCardProps) {
 
   // Filter suppliers that have receipts (grams > 0)
   const suppliersWithReceipts = Object.entries(suppliers).filter(([supplierCode, supplierData]) => {
-    return supplierData && supplierData.totalGrams21k > 0;
+    const hasReceipts = supplierData && supplierData.totalGrams21k > 0;
+    console.log(`🏪 Supplier ${supplierCode}:`, supplierData, `hasReceipts: ${hasReceipts}`);
+    return hasReceipts;
   });
+  
+  console.log('🏪 Suppliers with receipts:', suppliersWithReceipts);
 
   return (
     <View style={styles.container}>

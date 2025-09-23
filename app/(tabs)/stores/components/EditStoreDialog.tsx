@@ -1,4 +1,3 @@
-import { defaultProgressBarConfig } from '@/data/mockData';
 import { EditStoreDialogProps, ProgressBarConfig } from '@/data/types';
 import React, { useEffect, useState } from 'react';
 import {
@@ -13,6 +12,14 @@ import {
     View
 } from 'react-native';
 import { styles } from '../styles';
+
+// Default progress bar config - will be set by user or use API defaults
+const defaultProgressBarConfig: ProgressBarConfig = {
+  blue: 15,
+  yellow: 5,
+  orange: 5,
+  red: 5,
+};
 
 export function EditStoreDialog({ 
   visible, 

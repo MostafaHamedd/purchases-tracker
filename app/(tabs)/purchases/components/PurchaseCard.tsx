@@ -1,12 +1,20 @@
 import { PurchaseCardProps } from '@/data';
+import { purchasesApiService } from '@/data/services/purchasesApiService';
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useStores } from '../../stores/hooks/useStores';
+import { DeleteConfirmationDialog } from './DeleteConfirmationDialog';
+
+// Utility function for consistent grams rounding (matches services.ts)
+const roundGrams = (grams: number): number => {
+  return Math.round(grams * 10) / 10; // Round to 1 decimal place
+};
 
 export function PurchaseCard({ purchase, onRefresh }: PurchaseCardProps) {
   const router = useRouter();
   const { stores, loading: storesLoading } = useStores();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   // Find the store associated with this purchase
   const store = stores.find(s => s.id === purchase.storeId);
@@ -26,6 +34,30 @@ export function PurchaseCard({ purchase, onRefresh }: PurchaseCardProps) {
 
   const handlePress = () => {
     router.push(`/purchases/${purchase.id}`);
+  };
+
+  const handleDeletePress = (e: any) => {
+    e.stopPropagation(); // Prevent triggering the card press
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      console.log(`🗑️ Deleting purchase: ${purchase.id}`);
+      const result = await purchasesApiService.deletePurchase(purchase.id);
+      
+      if (result.success) {
+        Alert.alert('✅ Success', 'Purchase has been deleted successfully!');
+        onRefresh(); // Refresh the purchases list
+      } else {
+        Alert.alert('❌ Error', result.error || 'Failed to delete purchase. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error deleting purchase:', error);
+      Alert.alert('❌ Error', 'Failed to delete purchase. Please try again.');
+    } finally {
+      setShowDeleteDialog(false);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -72,13 +104,18 @@ export function PurchaseCard({ purchase, onRefresh }: PurchaseCardProps) {
   console.log('- purchase.payments.feesPaid:', purchase.payments.feesPaid, typeof purchase.payments.feesPaid);
   console.log('- purchase.suppliers:', purchase.suppliers);
   
+  // Helper function to format grams display (rounding is handled at data level)
+  const formatGrams = (grams: number): string => {
+    return grams % 1 === 0 ? grams.toString() : grams.toFixed(1);
+  };
+
   // Ensure we have valid numbers, default to 0 if NaN or undefined
   const totalGrams = Number(purchase.totalGrams) || 0;
   const gramsPaid = Number(purchase.payments.gramsPaid) || 0;
   const totalFees = Number(purchase.totalFees) || 0;
   const feesPaid = Number(purchase.payments.feesPaid) || 0;
   
-  const remainingGrams = totalGrams - gramsPaid;
+  const remainingGrams = roundGrams(totalGrams - gramsPaid);
   const remainingFees = totalFees - feesPaid;
   
   console.log('- calculated remainingGrams:', remainingGrams);
@@ -108,7 +145,7 @@ export function PurchaseCard({ purchase, onRefresh }: PurchaseCardProps) {
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor(purchase.status) }]}>
             <Text style={styles.statusText}>{purchase.status}</Text>
           </View>
-          <TouchableOpacity style={styles.closeButton}>
+          <TouchableOpacity style={styles.closeButton} onPress={handleDeletePress}>
             <Text style={styles.closeButtonText}>✕</Text>
           </TouchableOpacity>
         </View>
@@ -124,7 +161,7 @@ export function PurchaseCard({ purchase, onRefresh }: PurchaseCardProps) {
       <View style={styles.progressBarContainer}>
         <View style={[styles.progressBar, { backgroundColor: getProgressBarColor(daysLeft), width: `${getProgressPercentage(daysLeft)}%` }]} />
         <View style={styles.progressContent}>
-          <Text style={styles.progressGrams}>{remainingGrams}g</Text>
+          <Text style={styles.progressGrams}>{formatGrams(totalGrams)}g</Text>
           <Text style={styles.progressDays}>
             {daysLeft <= 0 ? `${Math.abs(daysLeft)} days overdue` : `${daysLeft} days left`}
           </Text>
@@ -134,13 +171,22 @@ export function PurchaseCard({ purchase, onRefresh }: PurchaseCardProps) {
       <View style={styles.amountsSection}>
         <View style={styles.amountColumn}>
           <Text style={styles.amountLabel}>Grams Due</Text>
-          <Text style={styles.amountValue}>{remainingGrams}g</Text>
+          <Text style={styles.amountValue}>{formatGrams(remainingGrams)}g</Text>
         </View>
         <View style={styles.amountColumn}>
           <Text style={styles.amountLabel}>Fees Due</Text>
           <Text style={styles.amountValue}>EGP {remainingFees.toLocaleString()}</Text>
         </View>
       </View>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        visible={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Purchase"
+        message={`Are you sure you want to delete this purchase from ${formatDate(purchase.date)}? This action cannot be undone.`}
+      />
     </TouchableOpacity>
   );
 }

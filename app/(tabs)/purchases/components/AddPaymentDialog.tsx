@@ -91,7 +91,7 @@ export function AddPaymentDialog({ visible, onClose, onSubmit, purchase }: AddPa
                 <Text style={styles.summaryTitle}>Payment Due Summary</Text>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Total Grams Due:</Text>
-                  <Text style={styles.summaryValue}>{purchase.totalGrams}g</Text>
+                  <Text style={[styles.summaryValue, { color: '#EF4444', fontWeight: '700' }]}>{purchase.totalGrams}g</Text>
                 </View>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Base Fees:</Text>

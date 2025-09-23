@@ -109,31 +109,41 @@ class ApiService {
     };
 
     try {
-      console.log(`🌐 API Request: ${options.method || 'GET'} ${url} (attempt ${retryCount + 1})`);
+      // Clean request logging
+      console.log(`\n🚀 ${options.method || 'GET'} ${url.split('/').pop() || 'API'}`);
+      console.log(`   📍 ${url}`);
+      if (options.body && typeof options.body === 'string') {
+        try {
+          const parsedBody = JSON.parse(options.body);
+          console.log(`   📦 Data:`, parsedBody);
+        } catch (e) {
+          console.log(`   📦 Body: ${options.body}`);
+        }
+      }
+      console.log(''); // Add space after request
+      
       const response = await fetch(url, config);
       clearTimeout(timeoutId); // Clear timeout on successful response
       const data = await response.json();
 
       if (!response.ok) {
-        console.error(`❌ API Error [${endpoint}]:`, {
-          status: response.status,
-          statusText: response.statusText,
-          data
-        });
+        console.log(`❌ ${response.status} - ${options.method || 'GET'} ${url.split('/').pop() || 'API'} FAILED`);
+        console.log(`   🚨 Error:`, data);
         const errorMessage = data.error || data.message || `HTTP ${response.status}`;
         throw new Error(makeUserFriendlyError(errorMessage));
       }
 
-      console.log(`✅ API Success [${endpoint}]:`, data);
+      console.log(`✅ ${response.status} - ${options.method || 'GET'} ${url.split('/').pop() || 'API'} SUCCESS`);
+      if (data && Object.keys(data).length > 0) {
+        console.log(`   📊 Response:`, data);
+      }
+      console.log(''); // Add space after success
       return data;
     } catch (error) {
       clearTimeout(timeoutId); // Clear timeout on error
-      console.error(`❌ API Error [${endpoint}]:`, {
-        url,
-        error: error instanceof Error ? error.message : error,
-        type: error instanceof TypeError ? 'Network Error' : 'API Error',
-        attempt: retryCount + 1
-      });
+      console.log(`❌ ${options.method || 'GET'} ${url.split('/').pop() || 'API'} ERROR`);
+      console.log(`   🚨 ${error instanceof Error ? error.message : error}`);
+      console.log(''); // Add space after error
       
       // Retry logic for network errors
       if (retryCount < apiConfig.retries && error instanceof TypeError) {
@@ -173,11 +183,6 @@ class ApiService {
 
   // POST request
   async post<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
-    console.log('📤 API POST request:');
-    console.log('  - endpoint:', endpoint);
-    console.log('  - data:', data);
-    console.log('  - JSON body:', data ? JSON.stringify(data) : undefined);
-    
     return this.request<T>(endpoint, {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
@@ -202,9 +207,16 @@ class ApiService {
   // Health check
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await this.get('/health');
-      return response.success;
-    } catch {
+      console.log('🏥 Health Check...');
+      const response = await this.get<{status: string, message: string, timestamp: string}>('/health');
+      // Health endpoint returns {status: "OK", message: "...", timestamp: "..."}
+      const isHealthy = response.data?.status === 'OK';
+      console.log(`🏥 ${isHealthy ? '✅ Healthy' : '❌ Unhealthy'}`);
+      console.log(''); // Add space after health check
+      return isHealthy;
+    } catch (error) {
+      console.log('🏥 ❌ Health Check Failed');
+      console.log(''); // Add space after health check
       return false;
     }
   }
@@ -212,4 +224,10 @@ class ApiService {
 
 // Create singleton instance
 export const apiService = new ApiService();
+
+// Log API configuration on startup
+console.log('\n🚀 API SERVICE READY');
+console.log(`   📍 ${API_BASE_URL}`);
+console.log(`   ⚙️  ${process.env.EXPO_PUBLIC_API_ENV || 'ngrok'} | ${apiConfig.timeout}ms | ${apiConfig.retries} retries`);
+console.log('');
 

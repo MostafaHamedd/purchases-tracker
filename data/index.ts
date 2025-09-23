@@ -21,7 +21,7 @@ export * from './services';
 export {
     calculateBaseFee,
     calculateDiscountAmount, calculateDueDate, calculateNetFee, calculatePurchaseBaseFees, calculatePurchaseFees, calculatePurchaseTotalDiscount, generatePaymentId, generatePurchaseId, getCurrentMonthTotalGrams,
-    getDiscountRate, getMockPurchases as mockPurchases, shouldApplyDiscount
+    getDiscountRate, shouldApplyDiscount
 } from './business';
 
 export {
@@ -45,5 +45,4 @@ export { RecalculationService, recalculateAfterPaymentChange, recalculateAfterPu
 // Re-export refresh events
 export { emitPaymentAdded, emitPaymentDeleted, emitPurchaseUpdated, emitStoreUpdated, emitSupplierUpdated, refreshEvents } from './services/refreshEvents';
 
-// Mock Data
-export * from './mockData';
+// Mock Data - REMOVED - Using API only
