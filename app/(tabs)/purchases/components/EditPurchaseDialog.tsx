@@ -69,7 +69,7 @@ export function EditPurchaseDialog({ visible, onClose, onSubmit, purchase }: Edi
 
     const totalGrams = parseFloat(formData.totalGrams);
     const totalFees = parseFloat(formData.totalFees);
-    const purchaseDate = formData.date.toISOString().split('T')[0];
+    const purchaseDate = `${formData.date.getFullYear()}-${String(formData.date.getMonth() + 1).padStart(2, '0')}-${String(formData.date.getDate()).padStart(2, '0')}`;
     const calculatedDiscount = calculateDiscount(totalGrams, totalFees, purchaseDate);
 
     const updatedPurchase = {

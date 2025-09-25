@@ -266,7 +266,7 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit, editMode = false
       id: Date.now().toString(),
       storeId: selectedStoreId,
       supplierId: firstSupplierId, // Add supplier_id for API
-      date: formData.date.toISOString().split('T')[0],
+      date: `${formData.date.getFullYear()}-${String(formData.date.getMonth() + 1).padStart(2, '0')}-${String(formData.date.getDate()).padStart(2, '0')}`,
       totalGrams: totalGrams,
       suppliers: selectedSuppliersData,
       totalFees: totalFees, // Sum of supplier fees

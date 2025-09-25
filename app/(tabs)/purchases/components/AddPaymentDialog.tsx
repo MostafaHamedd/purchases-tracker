@@ -64,7 +64,7 @@ export function AddPaymentDialog({ visible, onClose, onSubmit, purchase }: AddPa
       id: Date.now().toString(),
       feesPaid: parseFloat(formData.feesPaid) || 0,
       gramsPaid: parseFloat(formData.gramsPaid) || 0,
-      date: formData.date.toISOString().split('T')[0], // Format: YYYY-MM-DD
+      date: `${formData.date.getFullYear()}-${String(formData.date.getMonth() + 1).padStart(2, '0')}-${String(formData.date.getDate()).padStart(2, '0')}`, // Format: YYYY-MM-DD
       karatType: '21' as const, // Default to 21k for now
       note: formData.note || '' // Ensure note is always a string, not undefined
     };
