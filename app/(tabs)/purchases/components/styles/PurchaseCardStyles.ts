@@ -110,6 +110,11 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1F2937',
   },
+  progressDays: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
   progressFees: {
     fontSize: 12,
     fontWeight: '600',
@@ -145,5 +150,22 @@ export const styles = StyleSheet.create({
   daysLeftText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  amountsSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  amountColumn: {
+    flex: 1,
+  },
+  amountLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  amountValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
   },
 });

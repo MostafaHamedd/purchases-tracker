@@ -157,10 +157,10 @@ export const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    fontSize: 12,
     color: '#1F2937',
   },
   label: {
@@ -209,12 +209,17 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
   },
   receiptCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#D1D5DB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   receiptHeader: {
     flexDirection: 'row',
@@ -223,8 +228,8 @@ export const styles = StyleSheet.create({
     marginBottom: 8,
   },
   receiptTitle: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     color: '#1F2937',
   },
   removeReceiptButton: {
@@ -245,7 +250,7 @@ export const styles = StyleSheet.create({
   },
   receiptInput: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#D1D5DB',
     borderRadius: 6,
@@ -327,8 +332,8 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   selectedSupplierButton: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
+    backgroundColor: '#000000',
+    borderColor: '#000000',
   },
   supplierButtonText: {
     fontSize: 14,
@@ -365,9 +370,9 @@ export const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 4,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 6,
   },
   hintText: {
     fontSize: 10,

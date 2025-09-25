@@ -41,7 +41,10 @@ class PaymentsApiService {
 
   // Get payments for a specific purchase
   async getPaymentsByPurchase(purchaseId: string): Promise<ApiResponse<ApiPayment[]>> {
-    return apiService.get<ApiPayment[]>(this.endpoint, { purchase_id: purchaseId });
+    console.log(`🔍 Frontend: Getting payments for purchase: ${purchaseId}`);
+    const response = await apiService.get<ApiPayment[]>(`${this.endpoint}/purchase/${purchaseId}`);
+    console.log(`📄 Frontend: Payments response for ${purchaseId}:`, response);
+    return response;
   }
 
   // Get payment by ID
