@@ -12,7 +12,7 @@ const KARAT_CONVERSION_RATE = 0.857;
 
 // Utility function for consistent grams rounding
 const roundGrams = (grams: number): number => {
-  return Math.round(grams * 10) / GRAMS_PRECISION;
+  return Math.round(grams * 10) / 10;
 };
 
 // Convert API payment to app payment format
