@@ -1,9 +1,11 @@
 import { PaymentService, PurchaseService, refreshEvents } from '@/data';
+import { purchasesApiService } from '@/data/services/purchasesApiService';
 import { useEffect, useState } from 'react';
 
 export function usePurchaseDetail(purchaseId: string) {
   const [purchase, setPurchase] = useState<any>(null);
   const [payments, setPayments] = useState<any[]>([]);
+  const [receipts, setReceipts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,6 +26,21 @@ export function usePurchaseDetail(purchaseId: string) {
       } else {
         setError(paymentsResult.error || 'Failed to fetch payments');
         setPayments([]);
+      }
+      
+      // Get receipts data (async)
+      try {
+        const receiptsResponse = await purchasesApiService.getPurchaseReceipts(purchaseId);
+        if (receiptsResponse.success && receiptsResponse.data) {
+          setReceipts(receiptsResponse.data);
+          console.log('📄 Receipts loaded:', receiptsResponse.data.length);
+        } else {
+          console.warn('Failed to fetch receipts:', receiptsResponse);
+          setReceipts([]);
+        }
+      } catch (err) {
+        console.warn('Error fetching receipts:', err);
+        setReceipts([]);
       }
     } catch (err) {
       console.error('Error refreshing purchase:', err);
@@ -58,6 +75,7 @@ export function usePurchaseDetail(purchaseId: string) {
   return {
     purchase,
     payments,
+    receipts,
     loading,
     error,
     refreshPurchase,

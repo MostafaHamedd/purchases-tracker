@@ -21,6 +21,12 @@ export interface CreatePurchaseRequest {
   storeId: string;
   supplierId: string;
   suppliers: { [key: string]: { grams18k: number; grams21k: number; totalGrams21k: number } };
+  totalFees: number;
+  totalDiscount: number;
+  netFees: number;
+  // Receipt-related properties
+  supplierReceipts?: Record<string, string[]>;
+  receiptData?: Record<string, { grams: number; fees: number; karatType: '18' | '21' }>;
 }
 
 export interface CreatePaymentRequest {

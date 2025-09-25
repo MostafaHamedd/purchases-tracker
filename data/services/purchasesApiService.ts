@@ -28,6 +28,7 @@ export interface CreatePurchaseData {
   total_discount_amount: number;
   total_net_fees: number;
   due_date: string;
+  receipts?: any[]; // Array of receipt objects
 }
 
 export interface UpdatePurchaseData extends Partial<CreatePurchaseData> {
@@ -103,6 +104,15 @@ class PurchasesApiService {
 
   async deletePurchaseSupplier(id: string): Promise<ApiResponse<any>> {
     return apiService.delete<any>(`${this.purchaseSuppliersEndpoint}/${id}`);
+  }
+
+  // Purchase Receipts methods
+  async createBulkPurchaseReceipts(purchaseId: string, receipts: any[]): Promise<ApiResponse<any[]>> {
+    return apiService.post<any[]>(`/purchase-receipts/bulk`, { purchase_id: purchaseId, receipts });
+  }
+
+  async getPurchaseReceipts(purchaseId: string): Promise<ApiResponse<any[]>> {
+    return apiService.get<any[]>(`/purchase-receipts/purchase/${purchaseId}`);
   }
 }
 

@@ -15,14 +15,10 @@ import { AddPaymentDialog } from './components/AddPaymentDialog';
 import { AddPurchaseDialog } from './components/AddPurchaseDialog';
 import { EditPaymentDialog } from './components/EditPaymentDialog';
 import { PaymentCard } from './components/PaymentCard';
-import { SupplierReceiptCard } from './components/SupplierReceiptCard';
 import { usePurchaseDetail } from './hooks/usePurchaseDetail';
 import { styles } from './purchaseDetailStyles';
-
-// Utility function for consistent grams rounding (matches services.ts)
-const roundGrams = (grams: number): number => {
-  return Math.round(grams * 10) / 10; // Round to 1 decimal place
-};
+import { formatGrams, formatCurrency, formatDate, formatPaymentDate, roundGrams } from './utils/formatters';
+import { STATUS_COLORS, DAYS_LEFT_COLORS } from './constants';
 
 export default function PurchaseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -35,7 +31,7 @@ export default function PurchaseDetailScreen() {
   const [paymentToEdit, setPaymentToEdit] = useState<any>(null);
   const [paymentToDelete, setPaymentToDelete] = useState<{ id: string; date: string } | null>(null);
   
-  const { purchase, payments, loading, error, refreshPurchase } = usePurchaseDetail(id!);
+  const { purchase, payments, receipts, loading, error, refreshPurchase } = usePurchaseDetail(id!);
   
   // Find the store associated with this purchase
   const store = stores.find(s => s.id === purchase?.storeId);
@@ -48,24 +44,6 @@ export default function PurchaseDetailScreen() {
   console.log('Purchase detail - found store:', store);
   console.log('Purchase detail - store lookup result:', store ? `${store.code} (${store.name})` : 'NOT FOUND');
   
-  // Format date to show month name and day
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const month = date.toLocaleDateString('en-US', { month: 'long' });
-    const day = date.getDate();
-    const year = date.getFullYear();
-    return `${month} ${day}, ${year}`;
-  };
-
-  // Format payment date to be shorter and cleaner
-  const formatPaymentDate = (dateString: string) => {
-    if (!dateString) return 'No date';
-    const date = new Date(dateString);
-    const month = date.toLocaleDateString('en-US', { month: 'short' });
-    const day = date.getDate();
-    const year = date.getFullYear();
-    return `${month} ${day}, ${year}`;
-  };
 
   if (!purchase) {
     return (
@@ -161,6 +139,9 @@ export default function PurchaseDetailScreen() {
 
   // Helper function to format grams display (rounding is handled at data level)
   const formatGrams = (grams: number): string => {
+    if (grams === undefined || grams === null || isNaN(grams)) {
+      return '0';
+    }
     return grams % 1 === 0 ? grams.toString() : grams.toFixed(1);
   };
 
@@ -192,6 +173,8 @@ export default function PurchaseDetailScreen() {
   console.log('   - Clean purchaseData:', purchaseData);
   console.log('   - Suppliers data:', purchase?.suppliers);
   console.log('   - Suppliers keys:', Object.keys(purchase?.suppliers || {}));
+  console.log('   - Receipts data:', receipts);
+  console.log('   - Receipts count:', receipts?.length || 0);
 
 
   return (
@@ -301,8 +284,65 @@ export default function PurchaseDetailScreen() {
           </View>
         </View>
 
-        {/* Supplier Receipts Card */}
-        <SupplierReceiptCard suppliers={purchaseData.suppliers} />
+        {/* Receipts from purchase_receipts table */}
+        {receipts && receipts.length > 0 && (
+          <View style={styles.receiptsCard}>
+            <View style={styles.receiptsHeader}>
+              <Text style={styles.cardTitle}>Purchase Receipts</Text>
+              <Text style={styles.receiptsCount}>{receipts.length} receipt{receipts.length !== 1 ? 's' : ''}</Text>
+            </View>
+            
+            <View style={styles.receiptsList}>
+              {receipts.map((receipt, index) => (
+                <View key={receipt.id} style={styles.receiptItem}>
+                  <View style={styles.receiptHeader}>
+                    <Text style={styles.receiptTitle}>Receipt #{receipt.receipt_number}</Text>
+                    <Text style={styles.receiptDate}>{formatDate(receipt.created_at)}</Text>
+                  </View>
+                  
+                  <View style={styles.receiptDetails}>
+                    <View style={styles.receiptRow}>
+                      <Text style={styles.receiptLabel}>Supplier:</Text>
+                      <Text style={styles.receiptValue}>{receipt.supplier_name || receipt.supplier_id}</Text>
+                    </View>
+                    
+                    <View style={styles.receiptRow}>
+                      <Text style={styles.receiptLabel}>18k Grams:</Text>
+                      <Text style={styles.receiptValue}>{formatGrams(receipt.grams_18k)}g</Text>
+                    </View>
+                    
+                    <View style={styles.receiptRow}>
+                      <Text style={styles.receiptLabel}>21k Grams:</Text>
+                      <Text style={styles.receiptValue}>{formatGrams(receipt.grams_21k)}g</Text>
+                    </View>
+                    
+                    <View style={styles.receiptRow}>
+                      <Text style={styles.receiptLabel}>Total (21k equivalent):</Text>
+                      <Text style={[styles.receiptValue, { fontWeight: '600' }]}>{formatGrams(receipt.total_grams_21k)}g</Text>
+                    </View>
+                    
+                    <View style={styles.receiptRow}>
+                      <Text style={styles.receiptLabel}>Base Fee:</Text>
+                      <Text style={styles.receiptValue}>{formatCurrency(receipt.base_fees)}</Text>
+                    </View>
+                    
+                    {receipt.discount_amount > 0 && (
+                      <View style={styles.receiptRow}>
+                        <Text style={styles.receiptLabel}>Discount:</Text>
+                        <Text style={[styles.receiptValue, styles.discountValue]}>{formatCurrency(receipt.discount_amount)}</Text>
+                      </View>
+                    )}
+                    
+                    <View style={styles.receiptRow}>
+                      <Text style={styles.receiptLabel}>Net Fee:</Text>
+                      <Text style={[styles.receiptValue, { color: '#3B82F6', fontWeight: '600' }]}>{formatCurrency(receipt.net_fees)}</Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Payment History */}
         <View style={styles.paymentsCard}>

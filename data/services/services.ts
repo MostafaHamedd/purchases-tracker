@@ -1,13 +1,18 @@
-import { calculateDueDate, calculatePurchaseFees } from '../business';
+import { calculateDueDate, calculatePurchaseFees, calculatePurchaseTotalDiscount } from '../business';
 import { CreatePurchaseRequest, MonthlyTrends, Payment, PaymentTotals, PaymentValidation, Purchase, PurchaseFilters, PurchaseStats, RemainingAmounts } from '../types';
 import { convertTo21kEquivalent, getDaysLeft } from '../utils';
 import { ApiPayment, CreatePaymentData, paymentsApiService } from './paymentsApiService';
 import { ApiPurchase, CreatePurchaseData, purchasesApiService } from './purchasesApiService';
 import { emitPaymentAdded, emitPaymentDeleted } from './refreshEvents';
+import { suppliersApiService } from './suppliersApiService';
+
+// Constants
+const GRAMS_PRECISION = 1;
+const KARAT_CONVERSION_RATE = 0.857;
 
 // Utility function for consistent grams rounding
 const roundGrams = (grams: number): number => {
-  return Math.round(grams * 10) / 10; // Round to 1 decimal place
+  return Math.round(grams * 10) / GRAMS_PRECISION;
 };
 
 // Convert API payment to app payment format
@@ -237,7 +242,6 @@ export class PurchaseService {
       console.log('   📦 Data:', purchaseData);
       console.log(''); // Add space
     
-    const fees = calculatePurchaseFees(purchaseData.suppliers, purchaseData.date);
     // Calculate total grams from the new karat structure (sum of totalGrams21k for all suppliers)
     const totalGrams = roundGrams(Object.values(purchaseData.suppliers).reduce((sum, supplierData) => {
       if (supplierData && typeof supplierData === 'object') {
@@ -245,12 +249,15 @@ export class PurchaseService {
       }
       return sum;
     }, 0)); // Round to 1 decimal place
+    
+    // Calculate only discount (fees are now manual input)
+    const totalDiscount = calculatePurchaseTotalDiscount(purchaseData.suppliers, purchaseData.date);
       
       const purchaseDataForApi = {
         ...purchaseData,
         totalGrams,
-        totalFees: fees.totalFees,
-        totalDiscount: fees.totalDiscount,
+        totalFees: purchaseData.totalFees, // Use manual fee input
+        totalDiscount: totalDiscount, // Calculate discount only
         dueDate: calculateDueDate(purchaseData.date),
       };
       
@@ -259,6 +266,65 @@ export class PurchaseService {
       
       const apiPurchaseData = convertAppPurchaseToApiPurchase(purchaseDataForApi);
       
+      // Transform receipt data for API
+      const receipts: any[] = [];
+      if (purchaseData.supplierReceipts && purchaseData.receiptData) {
+        // Fetch suppliers to get proper ID mapping
+        const suppliersResponse = await suppliersApiService.getSuppliers();
+        if (!suppliersResponse.success || !suppliersResponse.data) {
+          console.warn('Failed to fetch suppliers for receipt mapping');
+        } else {
+          // Get supplier code to ID mapping
+          const supplierCodeToId: Record<string, string> = {};
+          suppliersResponse.data.forEach(supplier => {
+            supplierCodeToId[supplier.code] = supplier.id;
+          });
+          
+          for (const [supplierCode, supplierReceipts] of Object.entries(purchaseData.supplierReceipts)) {
+            // Get the actual supplier ID for this supplier code
+            const supplierId = supplierCodeToId[supplierCode];
+            if (!supplierId) {
+              console.warn(`Supplier ID not found for code: ${supplierCode}`);
+              continue;
+            }
+            
+            supplierReceipts.forEach((receiptId: string, index: number) => {
+              const receiptData = purchaseData.receiptData?.[receiptId];
+              if (receiptData && receiptData.grams > 0) {
+                const receiptNumber = index + 1;
+                const receiptDate = purchaseData.date;
+                
+                // Calculate fees and discounts
+                const baseFeePerGram = receiptData.fees / receiptData.grams || 0;
+                const discountPercentage = 0; // Will be calculated by backend
+                const netFeePerGram = baseFeePerGram;
+                const totalBaseFee = receiptData.fees;
+                const totalDiscountAmount = 0; // Will be calculated by backend
+                const totalNetFee = receiptData.fees;
+                
+                receipts.push({
+                  supplier_id: supplierId, // Use the actual supplier ID for this supplier
+                  receipt_number: receiptNumber,
+                  receipt_date: receiptDate,
+                  karat_type: receiptData.karatType,
+                  grams: receiptData.grams,
+                  base_fee_per_gram: baseFeePerGram,
+                  discount_percentage: discountPercentage,
+                  net_fee_per_gram: netFeePerGram,
+                  total_base_fee: totalBaseFee,
+                  total_discount_amount: totalDiscountAmount,
+                  total_net_fee: totalNetFee,
+                  notes: null,
+                });
+              }
+            });
+          }
+        }
+      }
+      
+      // Add receipts to API data
+      apiPurchaseData.receipts = receipts;
+      
       console.log('   📤 Sending to API:', apiPurchaseData);
       console.log('   📤 API Data includes supplier_id:', apiPurchaseData.supplier_id);
       console.log('   📤 Required fields check:');
@@ -266,6 +332,7 @@ export class PurchaseService {
       console.log('     - store_id:', apiPurchaseData.store_id);
       console.log('     - supplier_id:', apiPurchaseData.supplier_id);
       console.log('     - date:', apiPurchaseData.date);
+      console.log('   📤 Receipts being sent:', receipts.length, 'receipts');
       
       const response = await purchasesApiService.createPurchase(apiPurchaseData);
       

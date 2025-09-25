@@ -6,29 +6,35 @@ import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity
 import { useStores } from '../../stores/hooks/useStores';
 import { useSuppliers } from '../../suppliers/hooks/useSuppliers';
 
+// Constants
+const GRAMS_PRECISION = 1;
+const DEFAULT_DISCOUNT_RATE = 0;
+
+// Utility functions
+const roundGrams = (grams: number): number => {
+  return Math.round(grams * 10) / GRAMS_PRECISION;
+};
+
+const getDefaultDiscountRate = (supplier: any): number => {
+  return supplier.karat21.discountTiers.length > 0 
+    ? supplier.karat21.discountTiers[0].discountPercentage 
+    : DEFAULT_DISCOUNT_RATE;
+};
+
 export function AddPurchaseDialog({ visible, onClose, onSubmit, editMode = false, existingPurchase }: AddPurchaseDialogProps) {
-  // Utility function for consistent grams rounding (matches services.ts)
-  const roundGrams = (grams: number): number => {
-    return Math.round(grams * 10) / 10; // Round to 1 decimal place
-  };
-  
   const { stores } = useStores();
   const { suppliers, loading: suppliersLoading } = useSuppliers();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState('');
   
-  // Initialize suppliers data from API
+  // Initialize suppliers data
   const initializeSuppliersData = () => {
     const suppliersData: Record<string, { grams: number; fees: number; discountRate: number }> = {};
     suppliers.forEach(supplier => {
-      // Use the first available discount tier for 21k as default
-      const defaultDiscountRate = supplier.karat21.discountTiers.length > 0 
-        ? supplier.karat21.discountTiers[0].discountPercentage 
-        : 0;
       suppliersData[supplier.code] = { 
         grams: 0, 
         fees: 0, 
-        discountRate: defaultDiscountRate 
+        discountRate: getDefaultDiscountRate(supplier)
       };
     });
     return suppliersData;
@@ -191,6 +197,8 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit, editMode = false
       return;
     }
 
+    // Fees are optional, no validation needed
+
     if (formData.selectedSuppliers.length === 0) {
       Alert.alert('Error', 'Please select at least one supplier');
       return;
@@ -205,7 +213,7 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit, editMode = false
       const data = formData.receiptData[receiptId] || { grams: 0, fees: 0, karatType: '21' };
       return data.grams > 0; // Only require grams, fees are optional
     });
-
+    
     if (!hasValidData) {
       Alert.alert('Error', 'Please enter valid grams for all receipts');
       return;
@@ -248,6 +256,11 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit, editMode = false
     const firstSupplierCode = formData.selectedSuppliers.length > 0 ? formData.selectedSuppliers[0] : suppliers[0]?.code;
     const firstSupplierId = supplierCodeToId[firstSupplierCode] || suppliers[0]?.id || '1';
     
+    // Calculate discount based on suppliers and date
+    const totalDiscount = getTotalDiscount();
+    const totalFees = getTotalEnteredFees();
+    const netFees = totalFees - totalDiscount;
+    
     const purchaseData = {
       id: Date.now().toString(),
       storeId: selectedStoreId,
@@ -255,15 +268,20 @@ export function AddPurchaseDialog({ visible, onClose, onSubmit, editMode = false
       date: formData.date.toISOString().split('T')[0],
       totalGrams: totalGrams,
       suppliers: selectedSuppliersData,
-      totalFees: totalGrams * 5,
-      totalDiscount: totalGrams * 10,
-      netFees: totalGrams * -5,
-      status: 'Pending'
+      totalFees: totalFees, // Sum of supplier fees
+      totalDiscount: totalDiscount, // Calculated discount
+      netFees: netFees, // Calculated net fees
+      status: 'Pending',
+      // Include receipt data for individual receipts
+      supplierReceipts: formData.supplierReceipts,
+      receiptData: formData.receiptData
     };
 
     console.log('📝 AddPurchaseDialog submitting purchaseData:', purchaseData);
     console.log('📝 AddPurchaseDialog supplierId:', purchaseData.supplierId);
     console.log('📝 AddPurchaseDialog firstSupplierId:', firstSupplierId);
+    console.log('📝 AddPurchaseDialog supplierReceipts:', purchaseData.supplierReceipts);
+    console.log('📝 AddPurchaseDialog receiptData:', purchaseData.receiptData);
 
     onSubmit(purchaseData);
   };

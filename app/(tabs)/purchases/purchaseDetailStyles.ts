@@ -307,4 +307,74 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+  // Receipts styles
+  receiptsCard: {
+    backgroundColor: '#FFFFFF',
+    margin: 16,
+    marginTop: 0,
+    borderRadius: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  receiptsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  receiptsCount: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  receiptsList: {
+    padding: 16,
+  },
+  receiptItem: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  receiptHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  receiptTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  receiptDate: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  receiptDetails: {
+    gap: 8,
+  },
+  receiptRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  receiptLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  receiptValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
 });
