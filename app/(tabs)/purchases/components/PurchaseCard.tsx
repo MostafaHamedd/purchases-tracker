@@ -72,6 +72,18 @@ export function PurchaseCard({ purchase, onRefresh }: PurchaseCardProps) {
   };
 
   const getProgressBarColor = (daysLeft: number) => {
+    // Use store-specific progress bar configuration if available
+    if (store?.progressBarConfig) {
+      const config = store.progressBarConfig;
+      
+      if (daysLeft <= 0) return '#EF4444'; // Red for overdue
+      if (daysLeft <= config.red) return '#EF4444'; // Red for critical
+      if (daysLeft <= config.orange) return '#F59E0B'; // Orange for warning
+      if (daysLeft <= config.yellow) return '#FCD34D'; // Yellow for caution
+      return '#3B82F6'; // Blue for normal
+    }
+    
+    // Fallback to default values if store config not available
     if (daysLeft <= 0) return '#EF4444'; // Red for close to deadline/overdue
     if (daysLeft <= 5) return '#EF4444'; // Red for urgent (4 days left)
     if (daysLeft <= 10) return '#F59E0B'; // Orange for warning (9 days left)
@@ -79,7 +91,17 @@ export function PurchaseCard({ purchase, onRefresh }: PurchaseCardProps) {
   };
 
   const getProgressPercentage = (daysLeft: number) => {
-    // Assuming a 30-day period for progress calculation
+    // Use store-specific progress bar configuration if available
+    if (store?.progressBarConfig) {
+      const config = store.progressBarConfig;
+      // Use the blue threshold as the total period for progress calculation
+      const totalDays = config.blue;
+      if (daysLeft <= 0) return 100; // Close to deadline/overdue = full bar
+      if (daysLeft >= totalDays) return 0; // More than blue threshold = empty bar
+      return ((totalDays - daysLeft) / totalDays) * 100;
+    }
+    
+    // Fallback to default 30-day period
     const totalDays = 30;
     if (daysLeft <= 0) return 100; // Close to deadline/overdue = full bar
     if (daysLeft >= totalDays) return 0; // More than 30 days = empty bar
@@ -104,6 +126,11 @@ export function PurchaseCard({ purchase, onRefresh }: PurchaseCardProps) {
   console.log('- purchase.totalFees:', purchase.totalFees, typeof purchase.totalFees);
   console.log('- purchase.payments.feesPaid:', purchase.payments.feesPaid, typeof purchase.payments.feesPaid);
   console.log('- purchase.suppliers:', purchase.suppliers);
+  console.log('- store found:', store);
+  console.log('- store progressBarConfig:', store?.progressBarConfig);
+  console.log('- daysLeft:', daysLeft);
+  console.log('- progress bar color:', getProgressBarColor(daysLeft));
+  console.log('- progress percentage:', getProgressPercentage(daysLeft));
   
   // Helper function to format grams display (rounding is handled at data level)
   const formatGrams = (grams: number): string => {
