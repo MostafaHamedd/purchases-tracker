@@ -1,4 +1,5 @@
 import { APP_CONFIG } from '../constants/constants';
+import { monthlyTotalsApiService, DiscountCalculationRequest } from '../services/monthlyTotalsApiService';
 import { PurchaseFees } from '../types/apiTypes';
 
 // These functions are no longer needed - using API only
@@ -25,15 +26,13 @@ export const getCurrentMonthTotalGrams = (): number => {
 };
 
 export const getDiscountRate = (supplier: string): number => {
-  // Debug logging
-  console.log('🔍 getDiscountRate called with supplier:', supplier);
-  console.log('🔍 APP_CONFIG:', APP_CONFIG);
-  console.log('🔍 APP_CONFIG.MONTHLY_DISCOUNT_THRESHOLDS:', APP_CONFIG?.MONTHLY_DISCOUNT_THRESHOLDS);
+  // This function is now deprecated - use calculateReceiptDiscount from monthlyTotalsApiService instead
+  console.warn('⚠️ getDiscountRate is deprecated. Use monthlyTotalsApiService.calculateReceiptDiscount instead');
   
-  // Defensive check for APP_CONFIG
+  // Fallback to old logic for backward compatibility
   if (!APP_CONFIG || !APP_CONFIG.MONTHLY_DISCOUNT_THRESHOLDS || !APP_CONFIG.DISCOUNT_RATES) {
     console.warn('⚠️ APP_CONFIG is not properly loaded, using default discount rate');
-    return 0; // Return 0 discount if config is not available
+    return 0;
   }
   
   const monthlyTotal = getCurrentMonthTotalGrams();
@@ -78,6 +77,60 @@ export const calculateNetFee = (supplier: string, grams: number, purchaseDate: s
   const baseFee = calculateBaseFee(grams);
   const discountAmount = calculateDiscountAmount(supplier, grams, purchaseDate);
   return baseFee - discountAmount;
+};
+
+// New database-driven discount calculation functions
+export const calculateReceiptDiscountFromDB = async (
+  purchaseId: string,
+  supplierId: string,
+  grams: number,
+  karatType: '18' | '21'
+): Promise<{ discountRate: number; discountAmount: number }> => {
+  try {
+    const request: DiscountCalculationRequest = {
+      purchaseId,
+      supplierId,
+      grams,
+      karatType
+    };
+    
+    const response = await monthlyTotalsApiService.calculateReceiptDiscount(request);
+    
+    if (response.success && response.data) {
+      return {
+        discountRate: response.data.discountRate,
+        discountAmount: response.data.discountAmount
+      };
+    } else {
+      console.warn('⚠️ Failed to calculate discount from database, using fallback');
+      return {
+        discountRate: 0,
+        discountAmount: 0
+      };
+    }
+  } catch (error) {
+    console.error('❌ Error calculating discount from database:', error);
+    return {
+      discountRate: 0,
+      discountAmount: 0
+    };
+  }
+};
+
+export const getCurrentMonthTotalFromDB = async (): Promise<number> => {
+  try {
+    const response = await monthlyTotalsApiService.getCurrentMonthTotal();
+    
+    if (response.success && response.data) {
+      return response.data.total_grams_21k_equivalent;
+    } else {
+      console.warn('⚠️ Failed to get current month total from database');
+      return 0;
+    }
+  } catch (error) {
+    console.error('❌ Error getting current month total from database:', error);
+    return 0;
+  }
 };
 
 export const calculateDueDate = (purchaseDate: string): string => {

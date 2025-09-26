@@ -16,7 +16,7 @@ const configs: Record<string, ApiConfig> = {
   
   // ngrok tunnel (external access)
   ngrok: {
-    baseURL: 'https://c27f374d0a4c.ngrok-free.app/api',
+    baseURL: 'https://b59cd65687f5.ngrok-free.app/api',
     timeout: 15000,
     retries: 3,
   },
