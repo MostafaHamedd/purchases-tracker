@@ -5,6 +5,7 @@ export interface Supplier {
   id: string;
   name: string;
   code: string;
+  supplier_karat_type: '18' | '21';
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -14,12 +15,14 @@ export interface CreateSupplierData {
   id: string;
   name: string;
   code: string;
+  supplier_karat_type: '18' | '21';
   is_active: boolean;
 }
 
 export interface UpdateSupplierData {
   name?: string;
   code?: string;
+  supplier_karat_type?: '18' | '21';
   is_active?: boolean;
 }
 

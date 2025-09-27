@@ -207,6 +207,24 @@ export function PurchaseCard({ purchase, onRefresh }: PurchaseCardProps) {
         </View>
       </View>
 
+      {/* Discount Information */}
+      {purchase.totalDiscount && purchase.totalDiscount > 0 && (
+        <View style={styles.discountSection}>
+          <View style={styles.discountRow}>
+            <Text style={styles.discountLabel}>💰 Total Discount Applied:</Text>
+            <Text style={styles.discountValue}>EGP {purchase.totalDiscount.toLocaleString()}</Text>
+          </View>
+          {purchase.totalFees && purchase.totalFees > 0 && (
+            <View style={styles.discountRow}>
+              <Text style={styles.discountLabel}>📊 Discount Rate:</Text>
+              <Text style={styles.discountValue}>
+                {((purchase.totalDiscount / purchase.totalFees) * 100).toFixed(2)}%
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmationDialog
         visible={showDeleteDialog}

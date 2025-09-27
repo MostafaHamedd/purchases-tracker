@@ -321,21 +321,46 @@ export default function PurchaseDetailScreen() {
                       <Text style={[styles.receiptValue, { fontWeight: '600' }]}>{formatGrams(receipt.total_grams_21k)}g</Text>
                     </View>
                     
+                    {/* Base Fees */}
                     <View style={styles.receiptRow}>
-                      <Text style={styles.receiptLabel}>Base Fee:</Text>
-                      <Text style={styles.receiptValue}>{formatCurrency(receipt.base_fees)}</Text>
+                      <Text style={styles.receiptLabel}>Base Fees:</Text>
+                      <Text style={styles.receiptValue}>EGP {receipt.base_fees?.toLocaleString() || '0'}</Text>
                     </View>
                     
-                    {receipt.discount_amount > 0 && (
-                      <View style={styles.receiptRow}>
-                        <Text style={styles.receiptLabel}>Discount:</Text>
-                        <Text style={[styles.receiptValue, styles.discountValue]}>{formatCurrency(receipt.discount_amount)}</Text>
-                      </View>
+                    {/* Discount Information */}
+                    {receipt.discount_rate && parseFloat(receipt.discount_rate) > 0 && (
+                      <>
+                        <View style={styles.receiptRow}>
+                          <Text style={styles.receiptLabel}>Discount Rate:</Text>
+                          <Text style={[styles.receiptValue, { color: '#10B981', fontWeight: '600' }]}>
+                            {(parseFloat(receipt.discount_rate) * 100).toFixed(2)}%
+                          </Text>
+                        </View>
+                        
+                        <View style={styles.receiptRow}>
+                          <Text style={styles.receiptLabel}>Discount Amount:</Text>
+                          <Text style={[styles.receiptValue, { color: '#10B981', fontWeight: '600' }]}>
+                            EGP {receipt.discount_amount?.toLocaleString() || '0'}
+                          </Text>
+                        </View>
+                        
+                        {receipt.discount_tier && (
+                          <View style={styles.receiptRow}>
+                            <Text style={styles.receiptLabel}>Discount Tier:</Text>
+                            <Text style={[styles.receiptValue, { color: '#3B82F6', fontWeight: '500' }]}>
+                              {receipt.discount_tier.charAt(0).toUpperCase() + receipt.discount_tier.slice(1)}
+                            </Text>
+                          </View>
+                        )}
+                      </>
                     )}
                     
+                    {/* Net Fees */}
                     <View style={styles.receiptRow}>
-                      <Text style={styles.receiptLabel}>Net Fee:</Text>
-                      <Text style={[styles.receiptValue, { color: '#3B82F6', fontWeight: '600' }]}>{formatCurrency(receipt.net_fees)}</Text>
+                      <Text style={styles.receiptLabel}>Net Fees:</Text>
+                      <Text style={[styles.receiptValue, { fontWeight: '600', color: '#1F2937' }]}>
+                        EGP {receipt.net_fees?.toLocaleString() || '0'}
+                      </Text>
                     </View>
                   </View>
                 </View>

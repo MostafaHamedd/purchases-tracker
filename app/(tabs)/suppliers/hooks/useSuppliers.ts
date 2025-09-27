@@ -8,28 +8,24 @@ export type { Supplier };
 
 // Convert API discount tier to app discount tier format
 const convertApiDiscountTierToAppDiscountTier = (apiTier: ApiDiscountTier): DiscountTier => ({
-  id: apiTier.id,
-  name: apiTier.name,
-  threshold: apiTier.threshold,
-  discountPercentage: apiTier.discount_percentage,
-  isProtected: apiTier.is_protected
+  id: String(apiTier.id || ''),
+  name: String(apiTier.name || ''),
+  threshold: Number(apiTier.threshold || 0),
+  discountPercentage: Math.round((Number(apiTier.discount_percentage || 0) * 100) * 100) / 100, // Convert decimal to percentage with proper rounding (0.1 -> 10.00)
+  isProtected: Boolean(apiTier.is_protected)
 });
 
 // Convert API supplier to app supplier format
 const convertApiSupplierToAppSupplier = (apiSupplier: ApiSupplier, discountTiers: ApiDiscountTier[] = []): Supplier => {
-  // Separate discount tiers by karat type
-  const tiers18k = discountTiers.filter(tier => tier.karat_type === '18');
+  // Only 21k discount tiers are supported now
   const tiers21k = discountTiers.filter(tier => tier.karat_type === '21');
 
   return {
-    id: apiSupplier.id,
-    name: apiSupplier.name,
-    code: apiSupplier.code,
-    isActive: apiSupplier.is_active,
-    karat18: {
-      discountTiers: tiers18k.map(convertApiDiscountTierToAppDiscountTier),
-      isActive: tiers18k.length > 0
-    },
+    id: String(apiSupplier.id || ''),
+    name: String(apiSupplier.name || ''),
+    code: String(apiSupplier.code || ''),
+    supplierKaratType: (apiSupplier.supplier_karat_type as '18' | '21') || '21', // Default to 21k if not specified
+    isActive: Boolean(apiSupplier.is_active),
     karat21: {
       discountTiers: tiers21k.map(convertApiDiscountTierToAppDiscountTier),
       isActive: tiers21k.length > 0
@@ -42,6 +38,7 @@ const convertAppSupplierToApiSupplier = (appSupplier: Omit<Supplier, 'id'>): Cre
   id: Date.now().toString(), // Generate ID for new suppliers
   name: appSupplier.name,
   code: appSupplier.code,
+  supplier_karat_type: appSupplier.supplierKaratType,
   is_active: appSupplier.isActive,
 });
 
@@ -138,10 +135,13 @@ export function useSuppliers() {
       const response = await suppliersApiService.updateSupplier(supplierId, updateData);
       
       if (response.success) {
-        const updatedSupplier = convertApiSupplierToAppSupplier(response.data);
-        setSuppliers(prev => prev.map(supplier => 
-          supplier.id === supplierId ? updatedSupplier : supplier
-        ));
+        // Update discount tiers if provided
+        if (supplierData.karat21?.discountTiers) {
+          await updateDiscountTiers(supplierId, supplierData);
+        }
+        
+        // Refresh suppliers to get updated data
+        await fetchSuppliers();
         refreshEvents.emit('supplier-updated');
         return { success: true };
       } else {
@@ -153,6 +153,82 @@ export function useSuppliers() {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update supplier';
       setError(errorMessage);
       return { success: false, error: errorMessage };
+    }
+  };
+
+  // Function to get fresh supplier data for editing
+  const getSupplierForEdit = async (supplierId: string): Promise<Supplier | null> => {
+    try {
+      // Fetch fresh data from API
+      const suppliersResponse = await suppliersApiService.getActiveSuppliers();
+      
+      if (suppliersResponse.success) {
+        // Fetch discount tiers for all suppliers
+        const discountTiersResponse = await discountTiersApiService.getDiscountTiers();
+        
+        if (discountTiersResponse.success) {
+          // Group discount tiers by supplier ID
+          const tiersBySupplier = discountTiersResponse.data.reduce((acc, tier) => {
+            if (!acc[tier.supplier_id]) {
+              acc[tier.supplier_id] = [];
+            }
+            acc[tier.supplier_id].push(tier);
+            return acc;
+          }, {} as Record<string, ApiDiscountTier[]>);
+
+          // Find the specific supplier
+          const supplier = suppliersResponse.data.find(s => s.id === supplierId);
+          
+          if (supplier) {
+            const convertedSupplier = convertApiSupplierToAppSupplier(supplier, tiersBySupplier[supplier.id] || []);
+            console.log('Converted supplier for edit:', convertedSupplier);
+            return convertedSupplier;
+          }
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching fresh supplier data:', error);
+      return null;
+    }
+  };
+
+  // Helper function to update discount tiers
+  const updateDiscountTiers = async (supplierId: string, supplierData: Partial<Supplier>) => {
+    try {
+      // Update 21k tiers (only 21k supported now)
+      if (supplierData.karat21?.discountTiers) {
+        for (const tier of supplierData.karat21.discountTiers) {
+          // Check if this is a new tier (frontend-generated ID) or existing tier (database ID)
+          // New tiers have IDs like "tier1", "tier2", etc. (from addTier function)
+          // Existing tiers have IDs like "tier-003", "tier-004", etc. (from database)
+          const isNewTier = tier.id.match(/^tier\d+$/); // Matches "tier1", "tier2", etc.
+          
+          if (isNewTier) {
+            // New tier - create it
+            await discountTiersApiService.createDiscountTier({
+              id: tier.id, // Include the ID for new tiers
+              supplier_id: supplierId,
+              karat_type: '21',
+              name: tier.name,
+              threshold: tier.threshold,
+              discount_percentage: Math.round((tier.discountPercentage / 100) * 10000) / 10000, // Convert percentage to decimal with proper rounding
+              is_protected: tier.isProtected || false
+            });
+          } else {
+            // Existing tier - update it
+            await discountTiersApiService.updateDiscountTier(tier.id, {
+              name: tier.name,
+              threshold: tier.threshold,
+              discount_percentage: Math.round((tier.discountPercentage / 100) * 10000) / 10000, // Convert percentage to decimal with proper rounding
+              is_protected: tier.isProtected
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error updating discount tiers:', err);
+      throw err;
     }
   };
 
@@ -197,5 +273,6 @@ export function useSuppliers() {
     updateSupplier,
     deleteSupplier,
     refreshSuppliers,
+    getSupplierForEdit,
   };
 }

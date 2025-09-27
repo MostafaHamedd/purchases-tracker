@@ -20,11 +20,20 @@ export default function SuppliersScreen() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [supplierToDelete, setSupplierToDelete] = useState<{ id: string; name: string } | null>(null);
   const [supplierToEdit, setSupplierToEdit] = useState<Supplier | null>(null);
-  const { suppliers, loading, error, addSupplier, updateSupplier, deleteSupplier, refreshSuppliers } = useSuppliers();
+  const { suppliers, loading, error, addSupplier, updateSupplier, deleteSupplier, refreshSuppliers, getSupplierForEdit } = useSuppliers();
 
-  const handleEditSupplier = (supplier: Supplier) => {
-    setSupplierToEdit(supplier);
-    setShowEditDialog(true);
+  const handleEditSupplier = async (supplier: Supplier) => {
+    try {
+      // Get fresh supplier data from the database
+      const freshSupplier = await getSupplierForEdit(supplier.id);
+      setSupplierToEdit(freshSupplier || supplier);
+      setShowEditDialog(true);
+    } catch (error) {
+      console.error('Error fetching fresh supplier data:', error);
+      // Fallback to cached data if API fails
+      setSupplierToEdit(supplier);
+      setShowEditDialog(true);
+    }
   };
 
   const handleDeleteSupplier = (supplierId: string) => {
@@ -49,7 +58,7 @@ export default function SuppliersScreen() {
     }
   };
 
-  const handleSubmitNewSupplier = async (supplierData: { name: string; code: string; karat18: any; karat21: any; isActive: boolean }) => {
+  const handleSubmitNewSupplier = async (supplierData: { name: string; code: string; supplierKaratType: '18' | '21'; karat21: any; isActive: boolean }) => {
     const result = await addSupplier(supplierData);
     setShowAddDialog(false);
     
@@ -60,7 +69,7 @@ export default function SuppliersScreen() {
     }
   };
 
-  const handleSubmitEditSupplier = async (supplierData: { name: string; code: string; karat18: any; karat21: any; isActive: boolean }) => {
+  const handleSubmitEditSupplier = async (supplierData: { name: string; code: string; supplierKaratType: '18' | '21'; karat21: any; isActive: boolean }) => {
     if (supplierToEdit) {
       const result = await updateSupplier(supplierToEdit.id, supplierData);
       setShowEditDialog(false);

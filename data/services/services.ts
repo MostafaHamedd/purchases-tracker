@@ -169,6 +169,91 @@ export class PurchaseService {
     }
   }
 
+  // Get all purchases with discount verification
+  static async getAllPurchasesWithDiscountVerification(): Promise<Purchase[]> {
+    try {
+      console.log('🛒 Fetching purchases with discount verification from API...');
+      const response = await purchasesApiService.getPurchasesWithDiscountVerification();
+      
+      console.log('🛒 Purchases API response with discount verification:', response);
+      
+      if (response.success && response.data) {
+        console.log('✅ API purchases loaded with discount verification:', response.data.length);
+        if ((response as any).recalculated) {
+          console.log(`🔄 Discounts recalculated for ${(response as any).recalculated} receipts`);
+        }
+        
+        // Convert API purchases to app format and populate with suppliers and payments
+        const purchases = await Promise.all(
+          response.data.map(async (apiPurchase) => {
+            console.log('Processing API purchase:', apiPurchase);
+            const purchase = convertApiPurchaseToAppPurchase(apiPurchase);
+            
+            // Get suppliers for this purchase
+            try {
+              const suppliersResponse = await purchasesApiService.getPurchaseSuppliers(purchase.id);
+              if (suppliersResponse.success && suppliersResponse.data) {
+                // Convert suppliers data to the expected format
+                const suppliers: Record<string, { grams18k: number; grams21k: number; totalGrams21k: number }> = {};
+                suppliersResponse.data.forEach(supplier => {
+                  suppliers[supplier.supplier_code] = {
+                    grams18k: supplier.grams_18k,
+                    grams21k: supplier.grams_21k,
+                    totalGrams21k: supplier.total_grams_21k_equivalent,
+                  };
+                });
+                purchase.suppliers = suppliers;
+              }
+            } catch (error) {
+              console.warn(`Failed to fetch suppliers for purchase ${purchase.id}:`, error);
+            }
+            
+            // Get payments for this purchase
+            try {
+              const paymentsResponse = await paymentsApiService.getPaymentsByPurchase(purchase.id);
+              if (paymentsResponse.success && paymentsResponse.data) {
+                purchase.paymentHistory = paymentsResponse.data.map(convertApiPaymentToAppPayment);
+                
+                // Calculate payment totals
+                const totalGramsPaid21k = purchase.paymentHistory.reduce((sum, payment) => {
+                  const gramsPaid21kEquivalent = convertTo21kEquivalent(payment.gramsPaid, payment.karatType);
+                  return sum + gramsPaid21kEquivalent;
+                }, 0);
+                
+                const totalFeesPaid = purchase.paymentHistory.reduce((sum, payment) => {
+                  return sum + (Number(payment.feesPaid) || 0);
+                }, 0);
+                
+                console.log(`Payment calculation for purchase ${purchase.id}:`, {
+                  paymentHistoryLength: purchase.paymentHistory.length,
+                  totalGramsPaid21k,
+                  totalFeesPaid,
+                });
+                
+                purchase.payments = {
+                  gramsPaid: totalGramsPaid21k,
+                  feesPaid: totalFeesPaid,
+                };
+              }
+            } catch (error) {
+              console.warn(`Failed to fetch payments for purchase ${purchase.id}:`, error);
+            }
+            
+            return purchase;
+          })
+        );
+        
+        return purchases;
+      } else {
+        console.error('❌ Purchases API failed:', response);
+        throw new Error('Failed to fetch purchases from API');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching purchases:', error);
+      throw error;
+    }
+  }
+
 
   // Get purchase by ID
   static async getPurchaseById(id: string): Promise<Purchase | undefined> {
@@ -442,7 +527,8 @@ export class PurchaseService {
   // Filter purchases
   static async filterPurchases(filters: PurchaseFilters): Promise<Purchase[]> {
     try {
-      const purchases = await this.getAllPurchases();
+      // Use discount verification to ensure discounts are up to date
+      const purchases = await this.getAllPurchasesWithDiscountVerification();
       
       console.log('PurchaseService.filterPurchases debug:');
       console.log('- filters:', filters);

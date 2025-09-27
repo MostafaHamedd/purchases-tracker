@@ -149,10 +149,7 @@ export interface StoreFormData {
 export interface SupplierFormData {
   name: string;
   code: string;
-  karat18: {
-    discountTiers: DiscountTier[];
-    isActive: boolean;
-  };
+  supplierKaratType: '18' | '21';
   karat21: {
     discountTiers: DiscountTier[];
     isActive: boolean;

@@ -32,6 +32,21 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  discountVerificationStatus: {
+    backgroundColor: '#F0F9FF',
+    marginHorizontal: 16,
+    marginTop: 8,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#0EA5E9',
+  },
+  discountVerificationText: {
+    color: '#0C4A6E',
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
   monthlySummaryCard: {
     backgroundColor: '#FFFFFF',
     margin: 16,

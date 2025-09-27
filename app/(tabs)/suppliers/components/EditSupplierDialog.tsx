@@ -13,8 +13,8 @@ import {
 } from 'react-native';
 import { styles } from '../styles';
 
-// Karat types - moved from mock data
-const availableKaratTypes: KaratType[] = ['18', '21'];
+// Only 21k karat type for discount tiers (18k is converted to 21k equivalent)
+const availableKaratTypes: KaratType[] = ['21'];
 
 export function EditSupplierDialog({ 
   visible, 
@@ -24,32 +24,30 @@ export function EditSupplierDialog({
 }: EditSupplierDialogProps) {
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
-  const [karatType, setKaratType] = useState<KaratType>('18');
+  const [supplierKaratType, setSupplierKaratType] = useState<'18' | '21'>('21');
+  const [karatType, setKaratType] = useState<KaratType>('21');
   const [tiers, setTiers] = useState<DiscountTier[]>([]);
 
   // Initialize form when supplier changes
   useEffect(() => {
     if (supplier) {
-      setName(supplier.name);
-      setCode(supplier.code);
-      // Default to 18k karat type and use its discount tiers
-      setKaratType('18');
-      const initialTiers = supplier.karat18?.discountTiers || [];
+      setName(supplier.name || '');
+      setCode(supplier.code || '');
+      setSupplierKaratType(supplier.supplierKaratType || '21');
+      // Default to 21k karat type and use its discount tiers
+      setKaratType('21');
+      const initialTiers = supplier.karat21?.discountTiers || [];
       setTiers(Array.isArray(initialTiers) ? [...initialTiers] : []);
     }
   }, [supplier]);
 
-  // Update tiers when karat type changes
+  // Update tiers when karat type changes (only 21k now)
   const handleKaratTypeChange = (newKaratType: KaratType) => {
     setKaratType(newKaratType);
     if (supplier) {
-      if (newKaratType === '18') {
-        const tiers18k = supplier.karat18?.discountTiers || [];
-        setTiers(Array.isArray(tiers18k) ? [...tiers18k] : []);
-      } else {
-        const tiers21k = supplier.karat21?.discountTiers || [];
-        setTiers(Array.isArray(tiers21k) ? [...tiers21k] : []);
-      }
+      // Only 21k karat type supported
+      const tiers21k = supplier.karat21?.discountTiers || [];
+      setTiers(Array.isArray(tiers21k) ? [...tiers21k] : []);
     }
   };
 
@@ -95,19 +93,13 @@ export function EditSupplierDialog({
     onSubmitSupplier({
       name: name.trim(),
       code: code.trim().toUpperCase(),
-      karat18: {
-        discountTiers: karatType === '18' ? validTiers.map((tier, index) => ({
-          ...tier,
-          name: tier.name.trim(),
-        })) : (supplier.karat18?.discountTiers || []),
-        isActive: karatType === '18'
-      },
+      supplierKaratType: supplierKaratType,
       karat21: {
-        discountTiers: karatType === '21' ? validTiers.map((tier, index) => ({
+        discountTiers: validTiers.map((tier, index) => ({
           ...tier,
           name: tier.name.trim(),
-        })) : (supplier.karat21?.discountTiers || []),
-        isActive: karatType === '21'
+        })),
+        isActive: validTiers.length > 0
       },
       isActive: supplier.isActive
     });
@@ -115,7 +107,8 @@ export function EditSupplierDialog({
     // Reset form
     setName('');
     setCode('');
-    setKaratType('18');
+    setSupplierKaratType('21');
+    setKaratType('21');
     setTiers([]);
   };
 
@@ -210,38 +203,50 @@ export function EditSupplierDialog({
               />
             </View>
 
-            {/* Karat Type */}
+            {/* Supplier Karat Type */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Karat Type *</Text>
+              <Text style={styles.inputLabel}>Supplier Karat Type *</Text>
+              <Text style={styles.inputSubLabel}>
+                Select the karat type this supplier typically deals with. This helps determine if 18k gold needs to be converted to 21k equivalent.
+              </Text>
               <View style={styles.radioGroup}>
-                {availableKaratTypes.map((karat: KaratType) => (
+                {['18', '21'].map((karat) => (
                   <TouchableOpacity 
                     key={karat}
                     style={[
                       styles.radioOption,
-                      karatType === karat && styles.radioOptionSelected
+                      supplierKaratType === karat && styles.radioOptionSelected
                     ]}
-                    onPress={() => handleKaratTypeChange(karat)}
+                    onPress={() => setSupplierKaratType(karat as '18' | '21')}
                   >
                     <View style={[
                       styles.radioButton,
-                      karatType === karat && styles.radioButtonSelected
+                      supplierKaratType === karat && styles.radioButtonSelected
                     ]}>
-                      {karatType === karat && <View style={styles.radioButtonInner} />}
+                      {supplierKaratType === karat && <View style={styles.radioButtonInner} />}
                     </View>
                     <Text style={[
                       styles.radioLabel,
-                      karatType === karat && styles.radioLabelSelected
+                      supplierKaratType === karat && styles.radioLabelSelected
                     ]}>{karat} Karat</Text>
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
 
+            {/* Discount Tiers Info */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Discount Tiers for 21k Gold</Text>
+              <Text style={styles.inputSubLabel}>
+                All discount tiers are calculated based on 21k gold equivalent. 
+                18k gold is automatically converted to 21k equivalent (18k × 0.857 = 21k equivalent).
+              </Text>
+            </View>
+
             {/* Discount Tiers */}
             <View style={styles.inputGroup}>
               <View style={styles.tierHeader}>
-                <Text style={styles.inputLabel}>Discount Tiers</Text>
+                <Text style={styles.inputLabel}>Discount Tiers (21k)</Text>
                 <TouchableOpacity 
                   style={styles.addTierButton}
                   onPress={addTier}
@@ -250,20 +255,20 @@ export function EditSupplierDialog({
                 </TouchableOpacity>
               </View>
               <Text style={styles.inputSubLabel}>
-                Edit existing tiers or add new ones. Main tiers cannot be deleted.
+                Edit existing tiers or add new ones. Main tiers cannot be deleted. Currently showing {String(tiers.length)} tier(s) for 21k gold equivalent.
               </Text>
               
               <View style={styles.tiersContainer}>
-                {tiers && tiers.filter(tier => tier && tier.id).map((tier, index) => (
+                {tiers && tiers.filter(tier => tier && tier.id && typeof tier.id === 'string').map((tier, index) => (
                   <View key={tier.id} style={styles.tierInputCard}>
                     <View style={styles.tierHeader}>
                       <View style={styles.tierTitleContainer}>
                         <Text style={styles.tierNumber}>Tier {String(index + 1)}</Text>
-                        {tier.isProtected && (
+                        {tier.isProtected === true && (
                           <Text style={styles.protectedBadge}>Main Tier</Text>
                         )}
                       </View>
-                      {!tier.isProtected && (
+                      {tier.isProtected !== true && (
                         <TouchableOpacity 
                           style={styles.removeTierButton}
                           onPress={() => removeTier(tier.id)}
@@ -278,7 +283,7 @@ export function EditSupplierDialog({
                         <Text style={styles.tierInputLabel}>Name</Text>
                         <TextInput
                           style={styles.tierTextInput}
-                          value={tier.name || ''}
+                          value={tier.name ? String(tier.name) : ''}
                           onChangeText={(value) => updateTier(tier.id, 'name', value)}
                           placeholder="e.g., Basic, Premium"
                           placeholderTextColor="#9CA3AF"
@@ -289,7 +294,7 @@ export function EditSupplierDialog({
                         <Text style={styles.tierInputLabel}>Threshold (g)</Text>
                         <TextInput
                           style={styles.tierTextInput}
-                          value={tier.threshold ? tier.threshold.toString() : '0'}
+                          value={tier.threshold ? String(tier.threshold) : '0'}
                           onChangeText={(value) => updateTier(tier.id, 'threshold', parseInt(value) || 0)}
                           placeholder="0"
                           keyboardType="numeric"
@@ -301,7 +306,7 @@ export function EditSupplierDialog({
                         <Text style={styles.tierInputLabel}>Discount (%)</Text>
                         <TextInput
                           style={styles.tierTextInput}
-                          value={tier.discountPercentage ? tier.discountPercentage.toString() : '0'}
+                          value={tier.discountPercentage ? String(tier.discountPercentage.toFixed(2)) : '0'}
                           onChangeText={(value) => updateTier(tier.id, 'discountPercentage', parseFloat(value) || 0)}
                           placeholder="0"
                           keyboardType="numeric"

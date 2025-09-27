@@ -168,4 +168,29 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1F2937',
   },
+  // Discount section styles
+  discountSection: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  discountRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  discountLabel: {
+    fontSize: 12,
+    color: '#059669',
+    fontWeight: '500',
+  },
+  discountValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#10B981',
+  },
 });

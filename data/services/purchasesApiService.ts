@@ -69,6 +69,12 @@ class PurchasesApiService {
     return apiService.get<ApiPurchase[]>(this.endpoint, params);
   }
 
+  // Get all purchases with discount verification
+  async getPurchasesWithDiscountVerification(params?: PurchasesSearchParams): Promise<ApiResponse<ApiPurchase[]>> {
+    const verifyParams = { ...params, verify_discounts: 'true' };
+    return apiService.get<ApiPurchase[]>(this.endpoint, verifyParams);
+  }
+
   // Get purchase by ID
   async getPurchaseById(id: string): Promise<ApiResponse<ApiPurchase>> {
     return apiService.get<ApiPurchase>(`${this.endpoint}/${id}`);

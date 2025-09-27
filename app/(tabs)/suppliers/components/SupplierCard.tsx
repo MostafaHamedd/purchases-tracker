@@ -12,16 +12,12 @@ export function SupplierCard({ supplier, onDelete, onEdit }: SupplierCardProps) 
             <View style={styles.supplierCodeRow}>
               <Text style={styles.supplierCode}>{supplier.code}</Text>
               <View style={styles.karatBadges}>
-                {supplier.karat18.isActive && (
-                  <View style={[styles.karatBadge, { backgroundColor: '#F59E0B' }]}>
-                    <Text style={styles.karatText}>18K</Text>
-                  </View>
-                )}
-                {supplier.karat21.isActive && (
-                  <View style={[styles.karatBadge, { backgroundColor: '#10B981' }]}>
-                    <Text style={styles.karatText}>21K</Text>
-                  </View>
-                )}
+                <View style={[styles.karatBadge, { backgroundColor: '#10B981' }]}>
+                  <Text style={styles.karatText}>21K</Text>
+                </View>
+                <View style={[styles.karatBadge, { backgroundColor: supplier.supplierKaratType === '18' ? '#F59E0B' : '#10B981' }]}>
+                  <Text style={styles.karatText}>{supplier.supplierKaratType}K</Text>
+                </View>
               </View>
             </View>
           </View>
@@ -53,28 +49,10 @@ export function SupplierCard({ supplier, onDelete, onEdit }: SupplierCardProps) 
         <View style={styles.discountTiers}>
           <Text style={styles.discountTiersTitle}>Discount Tiers</Text>
           <View style={styles.tiersContainer}>
-            {/* 18k Tiers */}
-            {supplier.karat18.isActive && (
-              <View style={styles.karatSection}>
-                <Text style={styles.karatTitle}>18k Gold</Text>
-                <View style={styles.tiersRow}>
-                  {supplier.karat18.discountTiers
-                    .sort((a, b) => a.threshold - b.threshold)
-                    .map((tier) => (
-                      <View key={`18k-${tier.id}`} style={styles.tier}>
-                        <Text style={styles.tierLabel}>{tier.name}</Text>
-                        <Text style={styles.tierThreshold}>≥{tier.threshold}g</Text>
-                        <Text style={styles.tierValue}>{tier.discountPercentage}%</Text>
-                      </View>
-                    ))}
-                </View>
-              </View>
-            )}
-            
-            {/* 21k Tiers */}
+            {/* 21k Tiers (All discount tiers are for 21k gold equivalent) */}
             {supplier.karat21.isActive && (
               <View style={styles.karatSection}>
-                <Text style={styles.karatTitle}>21k Gold</Text>
+                <Text style={styles.karatTitle}>21k Gold Equivalent</Text>
                 <View style={styles.tiersRow}>
                   {supplier.karat21.discountTiers
                     .sort((a, b) => a.threshold - b.threshold)

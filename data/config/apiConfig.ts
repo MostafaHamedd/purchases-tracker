@@ -16,7 +16,7 @@ const configs: Record<string, ApiConfig> = {
   
   // ngrok tunnel (external access)
   ngrok: {
-    baseURL: 'https://cef238c28eaa.ngrok-free.app/api',
+    baseURL: 'https://b1d5d29280d1.ngrok-free.app/api',
     timeout: 15000,
     retries: 3,
   },
@@ -36,8 +36,8 @@ const getCurrentEnvironment = (): string => {
     return process.env.EXPO_PUBLIC_API_ENV;
   }
   
-  // Default to ngrok for external access
-  return 'ngrok';
+  // Default to local for local development
+  return 'local';
 };
 
 // Export current configuration

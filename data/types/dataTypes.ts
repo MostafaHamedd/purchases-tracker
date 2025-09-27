@@ -47,10 +47,7 @@ export interface Supplier {
   id: string;
   name: string;
   code: string;
-  karat18: {
-    discountTiers: DiscountTier[];
-    isActive: boolean;
-  };
+  supplierKaratType: '18' | '21'; // The karat type this supplier typically deals with
   karat21: {
     discountTiers: DiscountTier[];
     isActive: boolean;

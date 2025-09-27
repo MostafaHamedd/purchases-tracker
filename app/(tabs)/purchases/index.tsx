@@ -34,22 +34,33 @@ export default function PurchasesScreen() {
 
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [purchasesLoading, setPurchasesLoading] = useState(true);
+  const [discountVerificationStatus, setDiscountVerificationStatus] = useState<string>('');
 
   // Fetch purchases from API
   useEffect(() => {
     const fetchPurchases = async () => {
       try {
         setPurchasesLoading(true);
+        setDiscountVerificationStatus('🔄 Verifying discounts...');
+        
         const filteredPurchases = await PurchaseService.filterPurchases(filters);
+        
         console.log('Purchases filter debug:');
         console.log('- selectedStore:', selectedStore);
         console.log('- filters:', filters);
         console.log('- filtered purchases count:', filteredPurchases.length);
         console.log('- stores:', stores.map(s => ({ id: s.id, code: s.code })));
+        
         setPurchases(filteredPurchases);
+        setDiscountVerificationStatus('✅ Discounts verified');
+        
+        // Clear status after 3 seconds
+        setTimeout(() => setDiscountVerificationStatus(''), 3000);
       } catch (error) {
         console.error('Error fetching purchases:', error);
         setPurchases([]);
+        setDiscountVerificationStatus('❌ Error verifying discounts');
+        setTimeout(() => setDiscountVerificationStatus(''), 3000);
       } finally {
         setPurchasesLoading(false);
       }
@@ -111,6 +122,13 @@ export default function PurchasesScreen() {
           <Text style={styles.addButtonText}>+ Add Purchase</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Discount Verification Status */}
+      {discountVerificationStatus && (
+        <View style={styles.discountVerificationStatus}>
+          <Text style={styles.discountVerificationText}>{discountVerificationStatus}</Text>
+        </View>
+      )}
 
       {/* Monthly Summary Card */}
       <View style={styles.monthlySummaryCard}>
